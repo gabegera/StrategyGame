@@ -4,6 +4,7 @@
 #include "Actors/BuildableStructure.h"
 
 #include "Actors/BuildExclusionZone.h"
+#include "Actors/ResourceNode.h"
 #include "Components/ArrowComponent.h"
 
 // Sets default values
@@ -46,7 +47,7 @@ void ABuildableStructure::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StaticMesh->SetMaterial(0, CanBuildMaterial);
+	UpdateBuildMaterials();
 
 	if (IsBeingCreated())
 	{
@@ -70,24 +71,24 @@ void ABuildableStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AA
 		OverlappingExclusionZones.AddUnique(OtherActor);
 	}
 
-	if (IsOverlappingBuildExclusionZone())
+	if (OtherActor->IsA(AResourceNode::StaticClass()) &&
+		NeedsToBeNearResourceNode)
 	{
-		if (!IsUnderConstruction() && !IsCompleted())
-		{
-			StaticMesh->SetMaterial(0, CanNotBuildMaterial);
-		}
+		AResourceNode* Resource = Cast<AResourceNode>(OtherActor);
+		if (Resource->GetResourceType() == ResourceRequiredNearby)
+		OverlappingResourceNodes.Add(Resource);
 	}
+
+	UpdateBuildMaterials();
 }
 
 void ABuildableStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	OverlappingExclusionZones.Remove(OtherActor);
+	OverlappingResourceNodes.Remove(OtherActor);
 
-	if (!IsOverlappingBuildExclusionZone() && !IsUnderConstruction() && !IsCompleted())
-	{
-		StaticMesh->SetMaterial(0, CanBuildMaterial);
-	}
+	UpdateBuildMaterials();
 }
 
 bool ABuildableStructure::Select_Implementation(ARTSCamera* SelectInstigator)
@@ -104,7 +105,7 @@ bool ABuildableStructure::BeginConstruction()
 		ConsumeResources(ConstructionCost);
 		GetWorldTimerManager().SetTimer(ConstructionTimer, this, &ABuildableStructure::CompleteConstruction, ConstructionTime, false);
 		StructureMode = EStructureMode::UnderConstruction;
-		StaticMesh->SetMaterial(0, IsBuildingMaterial);
+		UpdateBuildMaterials();
 		return true;
 	}
 
@@ -121,9 +122,43 @@ void ABuildableStructure::CancelConstruction()
 void ABuildableStructure::CompleteConstruction()
 {
 	StructureMode = EStructureMode::Complete;
-	StaticMesh->SetMaterial(0, CanBuildMaterial);
 	StructureBounds->SetHiddenInGame(true);
 	ActivateStructureEffects();
+	UpdateBuildMaterials();
+
+	if (NeedsToBeNearResourceNode)
+	{
+		TargetResourceNode = FindClosestResourceNode();
+		
+		BeginDrainingResourceFromNode(ResourceAmountDrainedPerSecond);
+	}
+}
+
+void ABuildableStructure::UpdateBuildMaterials()
+{
+	if (IsUnderConstruction())
+	{
+		if (StaticMesh->GetMaterial(0) != IsBuildingMaterial) StaticMesh->SetMaterial(0, IsBuildingMaterial);
+		return;
+	}
+	if (IsCompleted())
+	{
+		if (StaticMesh->GetMaterial(0) != CanBuildMaterial) StaticMesh->SetMaterial(0, CanBuildMaterial);
+		return;
+	}
+	
+	if (IsOverlappingBuildExclusionZone())
+	{
+		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
+	}
+	else if (NeedsToBeNearResourceNode && !IsOverlappingResourceNode())
+	{
+		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
+	}
+	else
+	{
+		if (StaticMesh->GetMaterial(0) != CanBuildMaterial) StaticMesh->SetMaterial(0, CanBuildMaterial);
+	}
 }
 
 void ABuildableStructure::ActivateStructureEffects()
@@ -195,6 +230,26 @@ void ABuildableStructure::ActivateStructureEffects()
 	}
 }
 
+AResourceNode* ABuildableStructure::FindClosestResourceNode()
+{
+	float ClosestDistance = 0.0f;
+	AActor* ClosestActor = nullptr;
+	for (AActor* Node : OverlappingResourceNodes)
+	{
+		if (ClosestDistance <= 0.0f)
+		{
+			ClosestActor = Node;
+			ClosestDistance = GetDistanceTo(Node);
+		}
+		else if (GetDistanceTo(Node) < ClosestDistance)
+		{
+			ClosestActor = Node;
+		}
+	}
+
+	return Cast<AResourceNode>(ClosestActor);
+}
+
 void ABuildableStructure::BeginGeneratingResources(TMap<EResourceType, int32> ResourcesToGeneratePerSecond)
 {
 	FTimerDelegate ResourceGenerationDelegate;
@@ -228,6 +283,21 @@ void ABuildableStructure::ConsumeResources(TMap<EResourceType, int32> ResourcesT
 		int32 ResourceAmount = Resource.Value;
 		
 		GetStrategyGameState()->ConsumeResources(ResourceType, ResourceAmount);
+	}
+}
+
+void ABuildableStructure::BeginDrainingResourceFromNode(int32 ResourcesToBeDrainedPerSecond)
+{
+	FTimerDelegate ResourceDrainingDelegate;
+	ResourceDrainingDelegate.BindUObject(this, &ABuildableStructure::DrainResourceFromNode, ResourcesToBeDrainedPerSecond);
+	GetWorldTimerManager().SetTimer(ResourceDrainingTimer, ResourceDrainingDelegate, 1.0f, true);
+}
+
+void ABuildableStructure::DrainResourceFromNode(int32 ResourcesToBeDrainedPerSecond)
+{
+	if (TargetResourceNode)
+	{
+		TargetResourceNode->DrainResource(ResourcesToBeDrainedPerSecond);
 	}
 }
 

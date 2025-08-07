@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "GameFramework/Actor.h"
 #include "GameStates/StrategyGameState.h"
+#include "Actors/ResourceNode.h"
 #include "Interfaces/SelectionInterface.h"
 #include "BuildableStructure.generated.h"
 
@@ -78,6 +79,8 @@ protected:
 	// ------ VARIABLES & REFERENCES ------
 	UPROPERTY() EStructureMode StructureMode = EStructureMode::BeingCreated;
 	UPROPERTY() TArray<AActor*> OverlappingExclusionZones;
+	UPROPERTY() TArray<AActor*> OverlappingResourceNodes;
+	UPROPERTY() AResourceNode* TargetResourceNode;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TMap<EStructureEffect, int32> StructureEffects;
@@ -101,11 +104,21 @@ protected:
 
 	// ------ RESOURCES ------
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category="Construction")
 	TMap<EResourceType, int32> ConstructionCost;
 
 	UPROPERTY() FTimerHandle ResourceGenerationTimer;
 	UPROPERTY() FTimerHandle ResourceConsumptionTimer;
+	UPROPERTY() FTimerHandle ResourceDrainingTimer;
+
+	UPROPERTY(EditAnywhere, Category="Resources")
+	bool NeedsToBeNearResourceNode = false;
+
+	UPROPERTY(EditAnywhere, Category="Resources", meta=(EditCondition="NeedsToBeNearResourceNode"))
+	EResourceType ResourceRequiredNearby = EResourceType::Metal;
+
+	UPROPERTY(EditAnywhere, Category="Resources", meta=(EditCondition="NeedsToBeNearResourceNode"))
+	int32 ResourceAmountDrainedPerSecond = 5;
 
 	// ------ PROTECTED FUNCTIONS ------
 
@@ -133,8 +146,15 @@ public:
 	
 	void CompleteConstruction();
 
+	// Changes the mesh material depending on if the structure is being placed, is being constructed, or is unable to be built.
+	UFUNCTION(BlueprintCallable)
+	void UpdateBuildMaterials();
+
 	UFUNCTION(BlueprintCallable)
 	void ActivateStructureEffects();
+
+	UFUNCTION(BlueprintCallable)
+	AResourceNode* FindClosestResourceNode();
 
 	UFUNCTION(BlueprintCallable)
 	void BeginGeneratingResources(TMap<EResourceType, int32> ResourcesToGeneratePerSecond);
@@ -144,7 +164,9 @@ public:
 	void BeginConsumingResources(TMap<EResourceType, int32> ResourcesToConsumePerSecond);
 	void ConsumeResources(TMap<EResourceType, int32> ResourcesToConsumePerSecond);
 	
-	
+	UFUNCTION(BlueprintCallable)
+	void BeginDrainingResourceFromNode(int32 ResourcesToBeDrainedPerSecond);
+	void DrainResourceFromNode(int32 ResourcesToBeDrainedPerSecond);
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -170,6 +192,9 @@ public:
 	bool IsOverlappingBuildExclusionZone() { return !OverlappingExclusionZones.IsEmpty(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool IsOverlappingResourceNode() { return !OverlappingResourceNodes.IsEmpty(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<AActor*> GetOverlappingBuildExclusionZones() { return OverlappingExclusionZones; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -177,6 +202,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool HaveEnoughResourcesToBuild();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetNeedsToBeNearResourceNode() { return NeedsToBeNearResourceNode; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TMap<EResourceType, int32> GetConstructionResourceCost() { return ConstructionCost; }

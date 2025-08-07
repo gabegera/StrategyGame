@@ -12,6 +12,8 @@ AResourceNode::AResourceNode()
 
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>("Static Mesh");
 	StaticMesh->SetupAttachment(RootComponent);
+	StaticMesh->SetCollisionProfileName("NoCollision");
+	StaticMesh->SetGenerateOverlapEvents(false);
 
 	SphereTrigger = CreateDefaultSubobject<USphereComponent>("Sphere Trigger");
 	SphereTrigger->SetupAttachment(StaticMesh);
@@ -30,5 +32,10 @@ void AResourceNode::BeginPlay()
 void AResourceNode::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void AResourceNode::DrainResource(int32 DecreaseAmount)
+{
+	ResourceAmount = FMath::Clamp(ResourceAmount - DecreaseAmount, 0, ResourceAmount);
 }
 

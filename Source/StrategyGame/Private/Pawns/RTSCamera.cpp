@@ -109,6 +109,11 @@ void ARTSCamera::BuildStructure()
 		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "Not enough materials to build " + GetSelectedStructure()->GetDisplayName());
 		return;
 	}
+	if (!StructureToBuild->IsOverlappingResourceNode() && StructureToBuild->GetNeedsToBeNearResourceNode())
+	{
+		GEngine->AddOnScreenDebugMessage(800, 3.0f, FColor::Red, GetSelectedStructure()->GetDisplayName() + " needs to be near the correct resource.");
+		return;
+	}
 
 	ABuildableStructure* NewStructure = GetWorld()->SpawnActor<ABuildableStructure>(StructureToBuild->GetClass());
 	NewStructure->SetActorLocation(StructureToBuild->GetActorLocation());

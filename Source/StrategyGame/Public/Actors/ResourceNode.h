@@ -26,7 +26,10 @@ protected:
 	USphereComponent* SphereTrigger = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
-	TMap<EResourceType, int32> ResourcesInNode;
+	EResourceType ResourceType = EResourceType::Metal;
+
+	UPROPERTY(EditDefaultsOnly, Category="Resources")
+	int32 ResourceAmount = 500;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -38,9 +41,12 @@ public:
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TMap<EResourceType, int32> GetResourcesInNode() { return ResourcesInNode; }
+	int32 GetResourceAmount() { return ResourceAmount; }
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool DoesNodeContainResource(EResourceType ResourceToCheck) { return ResourcesInNode.Contains(ResourceToCheck); }
+	EResourceType GetResourceType() { return ResourceType; }
+
+	UFUNCTION(BlueprintCallable)
+	void DrainResource(int32 DecreaseAmount);
 	
 };
