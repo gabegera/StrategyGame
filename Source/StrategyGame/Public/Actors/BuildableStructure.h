@@ -21,25 +21,6 @@ enum class EStructureMode : uint8
 	Complete			UMETA(DisplayName="Complete"),
 };
 
-UENUM(BlueprintType)
-enum class EStructureEffect : uint8
-{
-	IncreasesMetalPerSecond				UMETA(DisplayName="Increases Metal Every Second"),
-	IncreasesAlienMaterialPerSecond		UMETA(DisplayName="Increases Alien Material Every Second"),
-	IncreasesFoodPerSecond				UMETA(DisplayName="Increases Food Every Second"),
-	IncreasesPowerPerSecond				UMETA(DisplayName="Increases Power Every Second"),
-	IncreasesMetalStorage		 		UMETA(DisplayName="Increases Metal Storage"),
-	IncreasesAlienMaterialStorage 		UMETA(DisplayName="Increases Alien Material Storage"),
-	IncreasesFoodStorage		 		UMETA(DisplayName="Increases Food Storage"),
-	IncreasesPowerCapacity				UMETA(DisplayName="Increases Power Capacity"),
-	IncreasesWorkerCapacity 			UMETA(DisplayName="Increases Worker Capacity"),
-	IncreasesScientistCapacity 			UMETA(DisplayName="Increases Scientist Capacity"),
-	ConsumesMetalPerSecond		 		UMETA(DisplayName="Consumes Metal Every Second"),
-	ConsumesAlienMaterialPerSecond		UMETA(DisplayName="Consumes Alien Material Every Second"),
-	ConsumesFoodPerSecond		 		UMETA(DisplayName="Consumes Food Every Second"),
-	ConsumesPowerPerSecond		 		UMETA(DisplayName="Consumes Power Every Second"),
-};
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStructureSelectedDelegate, ABuildableStructure*, NewSelectedStructure);
 
 UCLASS()
@@ -81,9 +62,6 @@ protected:
 	UPROPERTY() TArray<AActor*> OverlappingExclusionZones;
 	UPROPERTY() TArray<AActor*> OverlappingResourceNodes;
 	UPROPERTY() AResourceNode* TargetResourceNode;
-	
-	UPROPERTY(EditDefaultsOnly)
-	TMap<EStructureEffect, int32> StructureEffects;
 
 	// ------ CONSTRUCTION ------
 
@@ -111,14 +89,28 @@ protected:
 	UPROPERTY() FTimerHandle ResourceConsumptionTimer;
 	UPROPERTY() FTimerHandle ResourceDrainingTimer;
 
-	UPROPERTY(EditAnywhere, Category="Resources")
-	bool NeedsToBeNearResourceNode = false;
+	// ------ STRUCTURE EFFECTS ------
 
-	UPROPERTY(EditAnywhere, Category="Resources", meta=(EditCondition="NeedsToBeNearResourceNode"))
-	EResourceType ResourceRequiredNearby = EResourceType::Metal;
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects")
+	bool bGeneratesResources = false;
 
-	UPROPERTY(EditAnywhere, Category="Resources", meta=(EditCondition="NeedsToBeNearResourceNode"))
-	int32 ResourceAmountDrainedPerSecond = 5;
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Generation", meta=(EditCondition="bGeneratesResources", EditConditionHides))
+	TMap<EResourceType, float> ResourcesToGeneratePerSecond;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects")
+	bool bConsumesResources = false;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Consumption", meta=(EditCondition="bConsumesResources", EditConditionHides))
+	bool bConsumesResourceFromNearbyNode = false;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Consumption", meta=(EditCondition="bConsumesResources", EditConditionHides))
+	TMap<EResourceType, float> ResourcesToConsumePerSecond;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects")
+	bool bIncreasesStorageCapacity = false;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Storage", meta=(EditCondition="bIncreasesStorageCapacity", EditConditionHides))
+	TMap<EResourceType, int32> ResourcesToIncreaseStorage;
 
 	// ------ PROTECTED FUNCTIONS ------
 
@@ -143,7 +135,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void CancelConstruction();
-	
+	void ConsumeConstructionResources();
+	void RefundConstructionMaterials();
 	void CompleteConstruction();
 
 	// Changes the mesh material depending on if the structure is being placed, is being constructed, or is unable to be built.
@@ -157,16 +150,16 @@ public:
 	AResourceNode* FindClosestResourceNode();
 
 	UFUNCTION(BlueprintCallable)
-	void BeginGeneratingResources(TMap<EResourceType, int32> ResourcesToGeneratePerSecond);
-	void GenerateResources(TMap<EResourceType, int32> ResourcesToGeneratePerSecond);
+	void BeginGeneratingResources();
+	void GenerateResources();
 
 	UFUNCTION(BlueprintCallable)
-	void BeginConsumingResources(TMap<EResourceType, int32> ResourcesToConsumePerSecond);
-	void ConsumeResources(TMap<EResourceType, int32> ResourcesToConsumePerSecond);
+	void BeginConsumingResources();
+	void ConsumeResources();
 	
 	UFUNCTION(BlueprintCallable)
-	void BeginDrainingResourceFromNode(int32 ResourcesToBeDrainedPerSecond);
-	void DrainResourceFromNode(int32 ResourcesToBeDrainedPerSecond);
+	void BeginDrainingResourceFromNode();
+	void DrainResourceFromNode();
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -204,7 +197,7 @@ public:
 	bool HaveEnoughResourcesToBuild();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool GetNeedsToBeNearResourceNode() { return NeedsToBeNearResourceNode; }
+	bool ConsumesResourcesFromNearbyNode() { return bConsumesResourceFromNearbyNode; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TMap<EResourceType, int32> GetConstructionResourceCost() { return ConstructionCost; }

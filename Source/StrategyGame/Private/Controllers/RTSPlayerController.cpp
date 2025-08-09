@@ -13,7 +13,7 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	
 	// FIRST PERSON CHARACTER INPUT
 	Input->BindAction(Input_FP_Move, ETriggerEvent::Triggered, this, &ARTSPlayerController::FP_Move);
-	Input->BindAction(Input_FP_Move, ETriggerEvent::Canceled, this, &ARTSPlayerController::FP_Move);
+	Input->BindAction(Input_FP_Move, ETriggerEvent::Completed, this, &ARTSPlayerController::FP_Move);
 	Input->BindAction(Input_FP_Look, ETriggerEvent::Triggered, this, &ARTSPlayerController::FP_Look);
 	Input->BindAction(Input_FP_Sprint, ETriggerEvent::Triggered, this, &ARTSPlayerController::FP_Sprint);
 	Input->BindAction(Input_FP_Sprint, ETriggerEvent::Completed, this, &ARTSPlayerController::FP_StopSprinting);
@@ -21,7 +21,15 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	// RTS CAMERA INPUT
 	Input->BindAction(Input_RTS_Move, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Move);
-	Input->BindAction(Input_RTS_Move, ETriggerEvent::Canceled, this, &ARTSPlayerController::RTS_Move);
+	Input->BindAction(Input_RTS_Move, ETriggerEvent::Completed, this, &ARTSPlayerController::RTS_Move);
+	Input->BindAction(Input_RTS_PanCamera, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_PanCamera);
+	Input->BindAction(Input_RTS_PanCamera, ETriggerEvent::Completed, this, &ARTSPlayerController::RTS_PanCamera);
+	Input->BindAction(Input_RTS_RotateCamera, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_RotateCamera);
+	Input->BindAction(Input_RTS_RotateCamera, ETriggerEvent::Completed, this, &ARTSPlayerController::RTS_RotateCamera);
+	Input->BindAction(Input_RTS_Mouse_RotateCamera, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_MouseRotateCamera);
+	Input->BindAction(Input_RTS_Mouse_RotateCamera, ETriggerEvent::Completed, this, &ARTSPlayerController::RTS_MouseRotateCamera);
+	Input->BindAction(Input_RTS_MouseInput, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_MouseInput);
+	Input->BindAction(Input_RTS_MouseInput, ETriggerEvent::Completed, this, &ARTSPlayerController::RTS_MouseInput);
 	Input->BindAction(Input_RTS_Zoom, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Zoom);
 	Input->BindAction(Input_RTS_Select, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Select);
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
@@ -48,6 +56,17 @@ void ARTSPlayerController::BeginPlay()
 void ARTSPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+
+	if (InPawn->IsA(ARTSCamera::StaticClass()))
+	{
+		GetRTSCamera(); // Used to assign object pointer.
+		SetControllerMode(EControllerMode::RTS);
+	}
+	else if (InPawn->IsA(APlayerCharacter::StaticClass()))
+	{
+		GetPlayerCharacter(); // Used to assign object pointer.
+		SetControllerMode(EControllerMode::FirstPerson);
+	}
 }
 
 void ARTSPlayerController::FP_Move(const FInputActionInstance& Instance)
@@ -102,11 +121,73 @@ void ARTSPlayerController::RTS_Move(const FInputActionInstance& Instance)
 	GetRTSCamera()->Move(Value);
 }
 
-void ARTSPlayerController::RTS_MouseInput()
+void ARTSPlayerController::RTS_PanCamera(const FInputActionInstance& Instance)
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 	
-	GetRTSCamera()->MouseInput();
+	bIsPanBeingHeld = Instance.GetValue().Get<bool>();
+
+	if (bIsPanBeingHeld)
+	{
+		bEnableMouseOverEvents = false;
+        bEnableClickEvents = false;
+        SetShowMouseCursor(false);
+	}
+	else
+	{
+		bEnableMouseOverEvents = true;
+		bEnableClickEvents = true;
+		SetShowMouseCursor(true);
+	}
+}
+
+void ARTSPlayerController::RTS_RotateCamera(const FInputActionInstance& Instance)
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	float Value = Instance.GetValue().Get<float>();
+	
+	GetRTSCamera()->RotateCamera(Value);
+}
+
+void ARTSPlayerController::RTS_MouseRotateCamera(const FInputActionInstance& Instance)
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	bIsMouseRotateBeingHeld = Instance.GetValue().Get<bool>();
+
+	if (bIsMouseRotateBeingHeld)
+	{
+		bEnableMouseOverEvents = false;
+		bEnableClickEvents = false;
+		SetShowMouseCursor(false);
+	}
+	else
+	{
+		bEnableMouseOverEvents = true;
+		bEnableClickEvents = true;
+		SetShowMouseCursor(true);
+	}
+}
+
+void ARTSPlayerController::RTS_MouseInput(const FInputActionInstance& Instance)
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	FVector2D Value = Instance.GetValue().Get<FVector2D>();
+	Value = FVector2D(-Value.X, Value.Y);
+
+	if (bIsPanBeingHeld)
+	{
+		GetRTSCamera()->Move(Value * RTS_PanSensitivity);
+	}
+
+	if (bIsMouseRotateBeingHeld)
+	{
+		GetRTSCamera()->RotateCamera(-Value.X * RTS_RotateSensitivity);
+	}
+
+	
 }
 
 void ARTSPlayerController::RTS_Zoom(const FInputActionInstance& Instance)

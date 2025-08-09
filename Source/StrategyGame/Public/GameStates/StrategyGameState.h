@@ -40,7 +40,7 @@ public:
 	int32 GetResourceAmount(EResourceType ResourceType) { return ResourceInventory.FindRef(ResourceType); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources")
-	int32 GetMaximumResource(EResourceType ResourceType) { return MaximumResources.FindRef(ResourceType); }
+	int32 GetResourceCapacity(EResourceType ResourceType) { return MaximumResources.FindRef(ResourceType); }
 
 	// Attempts to add resources to the ResourceInventory Map. Returns if it was successful.
 	UFUNCTION(BlueprintCallable, Category="Resources")

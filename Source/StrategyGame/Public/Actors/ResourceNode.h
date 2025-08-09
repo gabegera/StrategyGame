@@ -8,6 +8,8 @@
 #include "GameFramework/Actor.h"
 #include "ResourceNode.generated.h"
 
+class ABuildableStructure;
+
 UCLASS()
 class STRATEGYGAME_API AResourceNode : public AActor
 {
@@ -25,6 +27,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	USphereComponent* SphereTrigger = nullptr;
 
+	UPROPERTY() ABuildableStructure* AssignedExtractor;
+
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	EResourceType ResourceType = EResourceType::Metal;
 
@@ -38,6 +42,14 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable)
+	void DrainResource(int32 DecreaseAmount);
+
+	// ------ SETTERS ------
+
+	UFUNCTION(BlueprintCallable)
+	void SetAssignedExtractor(ABuildableStructure* NewExtractor);
+
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -46,7 +58,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	EResourceType GetResourceType() { return ResourceType; }
 
-	UFUNCTION(BlueprintCallable)
-	void DrainResource(int32 DecreaseAmount);
-	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	ABuildableStructure* GetAssignedExtractor() { return AssignedExtractor; }
 };

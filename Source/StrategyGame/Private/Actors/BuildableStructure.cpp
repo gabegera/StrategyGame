@@ -72,11 +72,13 @@ void ABuildableStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AA
 	}
 
 	if (OtherActor->IsA(AResourceNode::StaticClass()) &&
-		NeedsToBeNearResourceNode)
+		bConsumesResourceFromNearbyNode)
 	{
 		AResourceNode* Resource = Cast<AResourceNode>(OtherActor);
-		if (Resource->GetResourceType() == ResourceRequiredNearby)
-		OverlappingResourceNodes.Add(Resource);
+		if (ResourcesToConsumePerSecond.Contains(Resource->GetResourceType()))
+		{
+			OverlappingResourceNodes.Add(Resource);
+		}
 	}
 
 	UpdateBuildMaterials();
@@ -102,10 +104,17 @@ bool ABuildableStructure::BeginConstruction()
 {
 	if (HaveEnoughResourcesToBuild())
 	{
-		ConsumeResources(ConstructionCost);
+		ConsumeConstructionResources();
 		GetWorldTimerManager().SetTimer(ConstructionTimer, this, &ABuildableStructure::CompleteConstruction, ConstructionTime, false);
 		StructureMode = EStructureMode::UnderConstruction;
 		UpdateBuildMaterials();
+
+		if (bConsumesResourceFromNearbyNode)
+		{
+			TargetResourceNode = FindClosestResourceNode();
+			if (TargetResourceNode) TargetResourceNode->SetAssignedExtractor(this);
+		}
+		
 		return true;
 	}
 
@@ -116,7 +125,31 @@ bool ABuildableStructure::BeginConstruction()
 void ABuildableStructure::CancelConstruction()
 {
 	GetWorldTimerManager().ClearTimer(ConstructionTimer);
+	RefundConstructionMaterials();
+	
 	Destroy();
+}
+
+void ABuildableStructure::ConsumeConstructionResources()
+{
+	for (auto Resource : ConstructionCost)
+	{
+		EResourceType ResourceType = Resource.Key;
+		int32 ResourceAmount = Resource.Value;
+		
+		GetStrategyGameState()->ConsumeResources(ResourceType, ResourceAmount);
+	}
+}
+
+void ABuildableStructure::RefundConstructionMaterials()
+{
+	for (auto Resource : ConstructionCost)
+	{
+		EResourceType ResourceType = Resource.Key;
+		int32 ResourceAmount = Resource.Value;
+		
+		GetStrategyGameState()->AddResources(ResourceType, ResourceAmount);
+	}
 }
 
 void ABuildableStructure::CompleteConstruction()
@@ -125,13 +158,6 @@ void ABuildableStructure::CompleteConstruction()
 	StructureBounds->SetHiddenInGame(true);
 	ActivateStructureEffects();
 	UpdateBuildMaterials();
-
-	if (NeedsToBeNearResourceNode)
-	{
-		TargetResourceNode = FindClosestResourceNode();
-		
-		BeginDrainingResourceFromNode(ResourceAmountDrainedPerSecond);
-	}
 }
 
 void ABuildableStructure::UpdateBuildMaterials()
@@ -151,7 +177,11 @@ void ABuildableStructure::UpdateBuildMaterials()
 	{
 		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
 	}
-	else if (NeedsToBeNearResourceNode && !IsOverlappingResourceNode())
+	else if (bConsumesResourceFromNearbyNode && !IsOverlappingResourceNode())
+	{
+		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
+	}
+	else if (bConsumesResourceFromNearbyNode && FindClosestResourceNode() && FindClosestResourceNode()->GetAssignedExtractor())
 	{
 		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
 	}
@@ -163,75 +193,25 @@ void ABuildableStructure::UpdateBuildMaterials()
 
 void ABuildableStructure::ActivateStructureEffects()
 {
-	TMap<EResourceType, int32> ResourcesToGeneratePerSecond;
-
-	TMap<EResourceType, int32> ResourcesToConsumePerSecond;
-	
-	for (auto Effect : StructureEffects)
+	if (bGeneratesResources) BeginGeneratingResources();
+	if (bConsumesResources && !bConsumesResourceFromNearbyNode) BeginConsumingResources();
+	if (bConsumesResources && bConsumesResourceFromNearbyNode) BeginDrainingResourceFromNode();
+	if (bIncreasesStorageCapacity)
 	{
-		EStructureEffect EffectType = Effect.Key;
-		int32 EffectValue = Effect.Value;
-
-		switch (EffectType)
+		for (auto Resource : ResourcesToIncreaseStorage)
 		{
-		case EStructureEffect::IncreasesMetalPerSecond:
-			ResourcesToGeneratePerSecond.Add(EResourceType::Metal, EffectValue);
-        	break;
-        case EStructureEffect::IncreasesAlienMaterialPerSecond:
-			ResourcesToGeneratePerSecond.Add(EResourceType::AlienMaterial, EffectValue);
-        	break;
-        case EStructureEffect::IncreasesFoodPerSecond:
-			ResourcesToGeneratePerSecond.Add(EResourceType::Food, EffectValue);
-        	break;
-		case EStructureEffect::IncreasesPowerPerSecond:
-			ResourcesToGeneratePerSecond.Add(EResourceType::Power, EffectValue);
-			break;			
-        case EStructureEffect::IncreasesMetalStorage:
-			GetStrategyGameState()->IncreaseResourceStorage(EResourceType::Metal, EffectValue);
-	        break;
-        case EStructureEffect::IncreasesAlienMaterialStorage:
-			GetStrategyGameState()->IncreaseResourceStorage(EResourceType::AlienMaterial, EffectValue);
-	        break;
-		case EStructureEffect::IncreasesFoodStorage:
-			GetStrategyGameState()->IncreaseResourceStorage(EResourceType::Food, EffectValue);
-	        break;			
-		case EStructureEffect::IncreasesWorkerCapacity:
-			GetStrategyGameState()->IncreaseResourceStorage(EResourceType::Workers, EffectValue);
-			break;
-		case EStructureEffect::IncreasesScientistCapacity:
-			GetStrategyGameState()->IncreaseResourceStorage(EResourceType::Scientists, EffectValue);
-			break;
-		case EStructureEffect::IncreasesPowerCapacity:
-			GetStrategyGameState()->IncreaseResourceStorage(EResourceType::Power, EffectValue);
-			break;
-		case EStructureEffect::ConsumesMetalPerSecond:
-			ResourcesToConsumePerSecond.Add(EResourceType::Metal, EffectValue);
-			break;
-		case EStructureEffect::ConsumesAlienMaterialPerSecond:
-			ResourcesToConsumePerSecond.Add(EResourceType::AlienMaterial, EffectValue);
-			break;
-		case EStructureEffect::ConsumesFoodPerSecond:
-			ResourcesToConsumePerSecond.Add(EResourceType::Food, EffectValue);
-			break;			
-		case EStructureEffect::ConsumesPowerPerSecond:
-			ResourcesToConsumePerSecond.Add(EResourceType::Power, EffectValue);
-			break;
+			EResourceType ResourceType = Resource.Key;
+			int32 Amount = Resource.Value;
+
+			GetStrategyGameState()->IncreaseResourceStorage(ResourceType, Amount);
 		}
-	}
-
-	if (!ResourcesToGeneratePerSecond.IsEmpty())
-	{
-		BeginGeneratingResources(ResourcesToGeneratePerSecond);
-	}
-
-	if (!ResourcesToConsumePerSecond.IsEmpty())
-	{
-		BeginConsumingResources(ResourcesToConsumePerSecond);
 	}
 }
 
 AResourceNode* ABuildableStructure::FindClosestResourceNode()
 {
+	if (OverlappingResourceNodes.IsEmpty()) return nullptr;
+	
 	float ClosestDistance = 0.0f;
 	AActor* ClosestActor = nullptr;
 	for (AActor* Node : OverlappingResourceNodes)
@@ -250,14 +230,12 @@ AResourceNode* ABuildableStructure::FindClosestResourceNode()
 	return Cast<AResourceNode>(ClosestActor);
 }
 
-void ABuildableStructure::BeginGeneratingResources(TMap<EResourceType, int32> ResourcesToGeneratePerSecond)
+void ABuildableStructure::BeginGeneratingResources()
 {
-	FTimerDelegate ResourceGenerationDelegate;
-	ResourceGenerationDelegate.BindUObject(this, &ABuildableStructure::GenerateResources, ResourcesToGeneratePerSecond);
-	GetWorldTimerManager().SetTimer(ResourceGenerationTimer, ResourceGenerationDelegate, 1.0f, true);
+	GetWorldTimerManager().SetTimer(ResourceGenerationTimer, this, &ABuildableStructure::GenerateResources, 1.0f, true);
 }
 
-void ABuildableStructure::GenerateResources(TMap<EResourceType, int32> ResourcesToGeneratePerSecond)
+void ABuildableStructure::GenerateResources()
 {
 	for (auto Resource : ResourcesToGeneratePerSecond)
 	{
@@ -268,14 +246,12 @@ void ABuildableStructure::GenerateResources(TMap<EResourceType, int32> Resources
 	}
 }
 
-void ABuildableStructure::BeginConsumingResources(TMap<EResourceType, int32> ResourcesToConsumePerSecond)
+void ABuildableStructure::BeginConsumingResources()
 {
-	FTimerDelegate ResourceConsumptionDelegate;
-	ResourceConsumptionDelegate.BindUObject(this, &ABuildableStructure::ConsumeResources, ResourcesToConsumePerSecond);
-	GetWorldTimerManager().SetTimer(ResourceConsumptionTimer, ResourceConsumptionDelegate, 1.0f, true);
+	GetWorldTimerManager().SetTimer(ResourceConsumptionTimer, this, &ABuildableStructure::ConsumeResources, 1.0f, true);
 }
 
-void ABuildableStructure::ConsumeResources(TMap<EResourceType, int32> ResourcesToConsumePerSecond)
+void ABuildableStructure::ConsumeResources()
 {
 	for (auto Resource : ResourcesToConsumePerSecond)
 	{
@@ -286,18 +262,39 @@ void ABuildableStructure::ConsumeResources(TMap<EResourceType, int32> ResourcesT
 	}
 }
 
-void ABuildableStructure::BeginDrainingResourceFromNode(int32 ResourcesToBeDrainedPerSecond)
+void ABuildableStructure::BeginDrainingResourceFromNode()
 {
-	FTimerDelegate ResourceDrainingDelegate;
-	ResourceDrainingDelegate.BindUObject(this, &ABuildableStructure::DrainResourceFromNode, ResourcesToBeDrainedPerSecond);
-	GetWorldTimerManager().SetTimer(ResourceDrainingTimer, ResourceDrainingDelegate, 1.0f, true);
+	GetWorldTimerManager().SetTimer(ResourceDrainingTimer, this, &ABuildableStructure::DrainResourceFromNode, 1.0f, true);
 }
 
-void ABuildableStructure::DrainResourceFromNode(int32 ResourcesToBeDrainedPerSecond)
+void ABuildableStructure::DrainResourceFromNode()
 {
 	if (TargetResourceNode)
 	{
-		TargetResourceNode->DrainResource(ResourcesToBeDrainedPerSecond);
+		int32 ResourceCapacity = GetStrategyGameState()->GetResourceCapacity(TargetResourceNode->GetResourceType());
+		int32 ResourceAmount = GetStrategyGameState()->GetResourceAmount(TargetResourceNode->GetResourceType());
+		if (ResourceCapacity >= ResourceAmount + ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType()))
+		{
+			TargetResourceNode->DrainResource(ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType()));
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(950, 3.0f, FColor::Red, GetDisplayName() + " Can't extract resources, storage is full.");
+		}
+	}
+	else
+	{
+		OverlappingResourceNodes.Remove(TargetResourceNode);
+
+		if (IsOverlappingResourceNode())
+		{
+			TargetResourceNode = FindClosestResourceNode();
+			if (TargetResourceNode) TargetResourceNode->SetAssignedExtractor(this);
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(951, 3.0f, FColor::Red, GetDisplayName() + ": No Nearby Ore Nodes.");
+		}
 	}
 }
 

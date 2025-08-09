@@ -34,14 +34,6 @@ void APlayerCharacter::BeginPlay()
 	GetWorldTimerManager().SetTimer(InteractionTimer, this, &APlayerCharacter::CheckForInteractable, 1.0f / InteractionChecksPerSecond, true);
 }
 
-void APlayerCharacter::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-
-	GetPlayerController()->GetPlayerCharacter();
-	GetPlayerController()->SetControllerMode(EControllerMode::FirstPerson);
-}
-
 void APlayerCharacter::Move(FVector2D MoveInput)
 {
 	if (IsSprinting())

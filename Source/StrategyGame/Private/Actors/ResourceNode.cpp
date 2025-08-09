@@ -37,5 +37,19 @@ void AResourceNode::Tick(float DeltaTime)
 void AResourceNode::DrainResource(int32 DecreaseAmount)
 {
 	ResourceAmount = FMath::Clamp(ResourceAmount - DecreaseAmount, 0, ResourceAmount);
+
+	if (ResourceAmount <= 0)
+	{
+		Destroy();
+	}
+}
+
+void AResourceNode::SetAssignedExtractor(ABuildableStructure* NewExtractor)
+{
+	if (GetAssignedExtractor())
+	{
+		GEngine->AddOnScreenDebugMessage(960, 3.0f, FColor::Red, "Cannot assign new extractor, there is already one assigned.");
+	}
+	else AssignedExtractor = NewExtractor;
 }
 

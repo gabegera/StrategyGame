@@ -54,6 +54,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Interact;
 	
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Move;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_PanCamera;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_RotateCamera;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Mouse_RotateCamera;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_MouseInput;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Cancel;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Zoom;
@@ -61,9 +64,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_ExitMode;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	float FP_MouseSensitivity = 1.0f;
+	float FP_MouseSensitivity = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	float RTS_PanSensitivity = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	float RTS_RotateSensitivity = 1.0f;
 
 	UPROPERTY() FVector2D MovementInput = FVector2D::ZeroVector;
+	UPROPERTY() bool bIsPanBeingHeld = false;
+	UPROPERTY() bool bIsMouseRotateBeingHeld = false;
+	UPROPERTY() FVector2D MousePosAtStartOfPan = FVector2D::ZeroVector;
 
 	UFUNCTION(BlueprintCallable, Category="Input")
 	void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent);
@@ -75,7 +87,7 @@ protected:
 public:
 
 	void FP_Move(const FInputActionInstance& Instance);
-
+	
 	void FP_Look(const FInputActionInstance& Instance);
 	
 	void FP_Sprint();
@@ -85,8 +97,14 @@ public:
 	void FP_Interact();
 
 	void RTS_Move(const FInputActionInstance& Instance);
+
+	void RTS_PanCamera(const FInputActionInstance& Instance);
 	
-	void RTS_MouseInput();
+	void RTS_RotateCamera(const FInputActionInstance& Instance);
+	
+	void RTS_MouseRotateCamera(const FInputActionInstance& Instance);
+	
+	void RTS_MouseInput(const FInputActionInstance& Instance);
 	
 	void RTS_Zoom(const FInputActionInstance& Instance);
 	
@@ -107,15 +125,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Getters")
 	EControllerMode GetControllerMode() { return ControllerMode; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool GetIsHoveringOverUI() { return IsHoveringOverUI; }
-
 	// ------ SETTERS ------
 
 	UFUNCTION(BlueprintCallable)
 	void SetControllerMode(EControllerMode NewMode);
-
-	UFUNCTION(BlueprintCallable)
-	bool SetIsHoveringOverUI(bool Input) { return IsHoveringOverUI = Input; }
 	
 };

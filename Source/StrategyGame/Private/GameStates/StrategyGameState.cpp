@@ -30,16 +30,16 @@ void AStrategyGameState::BeginPlay()
 		EResourceType ResourceType = Resource.Key;
 		int32 Amount = Resource.Value;
 		
-		if (Amount > GetMaximumResource(ResourceType))
+		if (Amount > GetResourceCapacity(ResourceType))
 		{
-			ResourceInventory.Add(ResourceType, GetMaximumResource(ResourceType));
+			ResourceInventory.Add(ResourceType, GetResourceCapacity(ResourceType));
 		}
 	}
 }
 
 bool AStrategyGameState::AddResources(EResourceType ResourceType, int32 Amount)
 {
-	if (GetResourceAmount(ResourceType) == GetMaximumResource(ResourceType))
+	if (GetResourceAmount(ResourceType) == GetResourceCapacity(ResourceType))
 	{
 		switch (ResourceType)
 		{
@@ -67,9 +67,9 @@ bool AStrategyGameState::AddResources(EResourceType ResourceType, int32 Amount)
 	
 	ResourceInventory.Add(ResourceType, GetResourceAmount(ResourceType) + Amount);
 
-	if (GetResourceAmount(ResourceType) > GetMaximumResource(ResourceType))
+	if (GetResourceAmount(ResourceType) > GetResourceCapacity(ResourceType))
 	{
-		ResourceInventory.Add(ResourceType, GetMaximumResource(ResourceType));
+		ResourceInventory.Add(ResourceType, GetResourceCapacity(ResourceType));
 	}
 
 	return true;
@@ -110,10 +110,10 @@ bool AStrategyGameState::ConsumeResources(EResourceType ResourceType, int32 Amou
 
 void AStrategyGameState::IncreaseResourceStorage(EResourceType ResourceType, int32 IncreaseAmount)
 {
-	MaximumResources.Add(ResourceType, GetMaximumResource(ResourceType) + IncreaseAmount);
+	MaximumResources.Add(ResourceType, GetResourceCapacity(ResourceType) + IncreaseAmount);
 }
 
 void AStrategyGameState::DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount)
 {
-	MaximumResources.Add(ResourceType, FMath::Clamp(GetMaximumResource(ResourceType) - DecreaseAmount, 0, GetMaximumResource(ResourceType)));
+	MaximumResources.Add(ResourceType, FMath::Clamp(GetResourceCapacity(ResourceType) - DecreaseAmount, 0, GetResourceCapacity(ResourceType)));
 }

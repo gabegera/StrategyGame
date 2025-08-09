@@ -4,6 +4,7 @@
 #include "Pawns/RTSCamera.h"
 
 #include "Characters/PlayerCharacter.h"
+#include "Components/ArrowComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -13,9 +14,12 @@ ARTSCamera::ARTSCamera()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
+	SpringArm->SetupAttachment(RootComponent);	
+	
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
-
+	Camera->SetupAttachment(SpringArm);
+	
 	OnStructureSelectedDelegate.AddUniqueDynamic(this, &ThisClass::OnStructureSelected);
 }
 
@@ -24,14 +28,8 @@ void ARTSCamera::BeginPlay()
 {
 	Super::BeginPlay();
 	
-}
-
-void ARTSCamera::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-	
-	GetPlayerController()->GetRTSCamera();
-	GetPlayerController()->SetControllerMode(EControllerMode::RTS);
+	SpringArm->TargetArmLength = (MaxZoomDistance + MinZoomDistance) / 2;
+	UpdateCameraPitch();
 }
 
 void ARTSCamera::OnStructureSelected(ABuildableStructure* Selected)
@@ -41,33 +39,54 @@ void ARTSCamera::OnStructureSelected(ABuildableStructure* Selected)
 
 void ARTSCamera::Move(FVector2D MoveInput)
 {
-	FVector MovementVector = MoveInput.Y * FVector::ForwardVector + MoveInput.X * FVector::RightVector;
-	MovementVector *= MaxMoveSpeed * GetWorld()->DeltaTimeSeconds;
+	float MoveSpeedMultiplier = 1000.0f;
+	FVector MovementVector = MoveInput.Y * GetActorForwardVector().RotateAngleAxis(GetActorRotation().Pitch, GetActorRightVector()) + MoveInput.X * GetActorRightVector();
+	MovementVector *= MoveSpeed * MoveSpeedMultiplier * GetWorld()->DeltaTimeSeconds;
+	// Used to make the camera move faster when it's more zoomed out, and slower when it's more zoomed in.
+	MovementVector *= GetZoomHeightAlpha() + 1.0f;
 
-	MovementVector = MovementVector.GetClampedToSize(-MaxMoveSpeed, MaxMoveSpeed);
+	// MovementVector = MovementVector.GetClampedToSize(-MoveSpeed, MoveSpeed);
 	
 	SetActorLocation(GetActorLocation() + MovementVector);
 }
 
-void ARTSCamera::MouseInput()
+void ARTSCamera::RotateCamera(float Input)
 {
-	
+	float RotationAmount = Input * CameraRotationSpeed * GetWorld()->DeltaTimeSeconds;
+
+	SetActorRotation(FRotator(GetActorRotation().Pitch, GetActorRotation().Yaw + RotationAmount, GetActorRotation().Roll));
+}
+
+void ARTSCamera::UpdateCameraPitch()
+{
+	FRotator MinRotation = GetActorRotation();
+	MinRotation.Pitch = -RotationAtMaxZoom;
+	FRotator MaxRotation = GetActorRotation();
+	MaxRotation.Pitch = -RotationAtMinZoom;
+
+	FRotator NewRotation = FRotator(FMath::Lerp(MaxRotation, MinRotation, GetZoomHeightAlpha()));
+	SetActorRotation(NewRotation);
 }
 
 void ARTSCamera::Zoom(float Input)
 {
-	FVector HeightVector = FVector::UpVector * Input * MaxZoomSpeed * GetWorld()->DeltaTimeSeconds;
+	float ZoomSpeedMultiplier = 1000.0f;
+	float ZoomValue = Input * MaxZoomSpeed * ZoomSpeedMultiplier * GetWorld()->DeltaTimeSeconds;
+	// Used to make the camera zoom faster when it's more zoomed out, and slower when it's more zoomed in.
+	ZoomValue *= GetZoomHeightAlpha() + 1.0f;
 
-	SetActorLocation(GetActorLocation() + HeightVector);
+	SpringArm->TargetArmLength += ZoomValue;
 
-	if (GetActorLocation().Z > MaxZoomHeight)
+	if (SpringArm->TargetArmLength > MaxZoomDistance)
 	{
-		SetActorLocation(FVector(GetActorLocation().X, GetActorLocation().Y, MaxZoomHeight));
+		SpringArm->TargetArmLength = MaxZoomDistance;
 	}
-	else if (GetActorLocation().Z < MinZoomHeight)
+	else if (SpringArm->TargetArmLength < MinZoomDistance)
 	{
-		SetActorLocation(FVector(GetActorLocation().X, GetActorLocation().Y, MinZoomHeight));
+		SpringArm->TargetArmLength = MinZoomDistance;
 	}
+
+	UpdateCameraPitch();
 }
 
 void ARTSCamera::SelectTarget()
@@ -104,16 +123,22 @@ void ARTSCamera::BuildStructure()
 		GEngine->AddOnScreenDebugMessage(800, 3.0f, FColor::Red, GetSelectedStructure()->GetDisplayName() + " is overlapping Build Exclusion Zone.");
 		return;
 	}
-	if (!StructureToBuild->HaveEnoughResourcesToBuild())
-	{
-		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "Not enough materials to build " + GetSelectedStructure()->GetDisplayName());
-		return;
-	}
-	if (!StructureToBuild->IsOverlappingResourceNode() && StructureToBuild->GetNeedsToBeNearResourceNode())
+	if (!StructureToBuild->IsOverlappingResourceNode() && StructureToBuild->ConsumesResourcesFromNearbyNode())
 	{
 		GEngine->AddOnScreenDebugMessage(800, 3.0f, FColor::Red, GetSelectedStructure()->GetDisplayName() + " needs to be near the correct resource.");
 		return;
 	}
+	if (StructureToBuild->IsOverlappingResourceNode() && StructureToBuild->ConsumesResourcesFromNearbyNode() && StructureToBuild->FindClosestResourceNode()->GetAssignedExtractor())
+	{
+		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "The Resource node already has an assigned extractor.");
+		return;
+	}	
+	if (!StructureToBuild->HaveEnoughResourcesToBuild())
+	{
+		GEngine->AddOnScreenDebugMessage(802, 3.0f, FColor::Red, "Not enough materials to build " + GetSelectedStructure()->GetDisplayName());
+		return;
+	}
+
 
 	ABuildableStructure* NewStructure = GetWorld()->SpawnActor<ABuildableStructure>(StructureToBuild->GetClass());
 	NewStructure->SetActorLocation(StructureToBuild->GetActorLocation());
@@ -143,7 +168,7 @@ FHitResult ARTSCamera::LineTraceToMousePos()
 	FHitResult Hit;
 	bool IgnoreSelf = true;
 
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), TraceStart, TraceEnd, UEngineTypes::ConvertToTraceType(ECC_WorldDynamic),
+	UKismetSystemLibrary::LineTraceSingleByProfile(GetWorld(), TraceStart, TraceEnd, "GroundFloor",
 		TraceComplex, ActorsToIgnore, EDrawDebugTrace::None, Hit, IgnoreSelf, FLinearColor::Red, FLinearColor::Green, 0.5f);
 	
 	return Hit;
@@ -180,37 +205,37 @@ void ARTSCamera::Tick(float DeltaTime)
 	FString MetalString = "Metal: ";
 	MetalString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Metal));
 	MetalString.Append(" / ");
-	MetalString.AppendInt(GetStrategyGameState()->GetMaximumResource(EResourceType::Metal));
+	MetalString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Metal));
 	GEngine->AddOnScreenDebugMessage(930, 1.0f, FColor::White, MetalString);
 	
 	FString AlienMaterialString = "Alien Material: ";
 	AlienMaterialString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::AlienMaterial));
 	AlienMaterialString.Append(" / ");
-	AlienMaterialString.AppendInt(GetStrategyGameState()->GetMaximumResource(EResourceType::AlienMaterial));
+	AlienMaterialString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::AlienMaterial));
 	GEngine->AddOnScreenDebugMessage(931, 1.0f, FColor::White, AlienMaterialString);
 	
 	FString FoodString = "Food: ";
 	FoodString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Food));
 	FoodString.Append(" / ");
-	FoodString.AppendInt(GetStrategyGameState()->GetMaximumResource(EResourceType::Food));
+	FoodString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Food));
 	GEngine->AddOnScreenDebugMessage(932, 1.0f, FColor::White, FoodString);
 
 	FString PowerString = "Power: ";
 	PowerString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Power));
 	PowerString.Append(" / ");
-	PowerString.AppendInt(GetStrategyGameState()->GetMaximumResource(EResourceType::Power));
+	PowerString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Power));
 	GEngine->AddOnScreenDebugMessage(933, 1.0f, FColor::White, PowerString);
 
 	FString WorkersString = "Workers: ";
 	WorkersString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Workers));
 	WorkersString.Append(" / ");
-	WorkersString.AppendInt(GetStrategyGameState()->GetMaximumResource(EResourceType::Workers));
+	WorkersString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Workers));
 	GEngine->AddOnScreenDebugMessage(934, 1.0f, FColor::White, WorkersString);
 
 	FString ScientistsString = "Scientists: ";
 	ScientistsString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Scientists));
 	ScientistsString.Append(" / ");
-	ScientistsString.AppendInt(GetStrategyGameState()->GetMaximumResource(EResourceType::Scientists));
+	ScientistsString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Scientists));
 	GEngine->AddOnScreenDebugMessage(935, 1.0f, FColor::White, ScientistsString);
 }
 
