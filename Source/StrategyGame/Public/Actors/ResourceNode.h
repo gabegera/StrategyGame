@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "Components/SphereComponent.h"
 #include "GameStates/StrategyGameState.h"
-#include "GameFramework/Actor.h"
+#include "CustomActor.h"
 #include "ResourceNode.generated.h"
 
-class ABuildableStructure;
+class ABuildable;
 
 UCLASS()
-class STRATEGYGAME_API AResourceNode : public AActor
+class STRATEGYGAME_API AResourceNode : public ACustomActor
 {
 	GENERATED_BODY()
 
@@ -27,7 +27,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	USphereComponent* SphereTrigger = nullptr;
 
-	UPROPERTY() ABuildableStructure* AssignedExtractor;
+	UPROPERTY() ABuildable* AssignedExtractor;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	EResourceType ResourceType = EResourceType::Metal;
@@ -48,7 +48,7 @@ public:
 	// ------ SETTERS ------
 
 	UFUNCTION(BlueprintCallable)
-	void SetAssignedExtractor(ABuildableStructure* NewExtractor);
+	void SetAssignedExtractor(ABuildable* NewExtractor);
 
 	// ------ GETTERS ------
 
@@ -59,5 +59,5 @@ public:
 	EResourceType GetResourceType() { return ResourceType; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ABuildableStructure* GetAssignedExtractor() { return AssignedExtractor; }
+	ABuildable* GetAssignedExtractor() { return AssignedExtractor; }
 };

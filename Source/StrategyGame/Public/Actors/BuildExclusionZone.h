@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Components/BoxComponent.h"
-#include "GameFramework/Actor.h"
+#include "CustomActor.h"
 #include "BuildExclusionZone.generated.h"
 
 UCLASS()
-class STRATEGYGAME_API ABuildExclusionZone : public AActor
+class STRATEGYGAME_API ABuildExclusionZone : public ACustomActor
 {
 	GENERATED_BODY()
 

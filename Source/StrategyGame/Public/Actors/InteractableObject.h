@@ -3,12 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "CustomActor.h"
 #include "Interfaces/InteractionInterface.h"
 #include "InteractableObject.generated.h"
 
+class AStrategyGameState;
+
 UCLASS()
-class STRATEGYGAME_API AInteractableObject : public AActor, public IInteractionInterface
+class STRATEGYGAME_API AInteractableObject : public ACustomActor, public IInteractionInterface
 {
 	GENERATED_BODY()
 	

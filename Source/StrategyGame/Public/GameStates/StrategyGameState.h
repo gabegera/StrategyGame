@@ -18,6 +18,8 @@ enum class EResourceType : uint8
 	Scientists			UMETA(DisplayName="Scientists"),
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FResourcesChangedDelegate);
+
 UCLASS()
 class STRATEGYGAME_API AStrategyGameState : public AGameStateBase
 {
@@ -26,6 +28,7 @@ class STRATEGYGAME_API AStrategyGameState : public AGameStateBase
 	AStrategyGameState();
 
 protected:
+	
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	TMap<EResourceType, int32> ResourceInventory;
 
@@ -35,6 +38,9 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FResourcesChangedDelegate ResourcesChangedDelegate;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources")
 	int32 GetResourceAmount(EResourceType ResourceType) { return ResourceInventory.FindRef(ResourceType); }

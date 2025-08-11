@@ -3,6 +3,8 @@
 
 #include "Actors/InteractableObject.h"
 
+#include "GameStates/StrategyGameState.h"
+
 // Sets default values
 AInteractableObject::AInteractableObject()
 {
@@ -30,4 +32,3 @@ void AInteractableObject::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-

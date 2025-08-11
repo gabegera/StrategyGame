@@ -3,17 +3,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildableStructure.h"
-#include "StorageBuilding.generated.h"
+#include "Buildable.h"
+#include "Road.generated.h"
 
 UCLASS()
-class STRATEGYGAME_API AStorageBuilding : public ABuildableStructure
+class STRATEGYGAME_API ARoad : public ABuildable
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	AStorageBuilding();
+	ARoad();
 
 protected:
 	// Called when the game starts or when spawned

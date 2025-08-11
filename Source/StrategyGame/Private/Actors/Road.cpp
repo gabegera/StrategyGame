@@ -1,25 +1,25 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Actors/StorageBuilding.h"
+#include "Actors/Road.h"
 
 
 // Sets default values
-AStorageBuilding::AStorageBuilding()
+ARoad::ARoad()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 }
 
 // Called when the game starts or when spawned
-void AStorageBuilding::BeginPlay()
+void ARoad::BeginPlay()
 {
 	Super::BeginPlay();
 	
 }
 
 // Called every frame
-void AStorageBuilding::Tick(float DeltaTime)
+void ARoad::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }

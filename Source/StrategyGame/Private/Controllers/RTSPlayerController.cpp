@@ -33,6 +33,8 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_RTS_Zoom, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Zoom);
 	Input->BindAction(Input_RTS_Select, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Select);
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
+	Input->BindAction(Input_RTS_EquipRecycleTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRecycleTool);
+	Input->BindAction(Input_RTS_EquipMoveTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipMoveTool);
 	Input->BindAction(Input_RTS_ExitMode, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_ExitMode);
 }
 
@@ -211,6 +213,20 @@ void ARTSPlayerController::RTS_Cancel()
 	if (ControllerMode != EControllerMode::RTS) return;
 
 	GetRTSCamera()->CancelAction();
+}
+
+void ARTSPlayerController::RTS_EquipRecycleTool()
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	GetRTSCamera()->EquipRecycleTool();
+}
+
+void ARTSPlayerController::RTS_EquipMoveTool()
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	GetRTSCamera()->EquipMoveTool();
 }
 
 void ARTSPlayerController::RTS_ExitMode()

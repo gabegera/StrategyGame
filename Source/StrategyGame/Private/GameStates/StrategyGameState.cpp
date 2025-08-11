@@ -72,6 +72,7 @@ bool AStrategyGameState::AddResources(EResourceType ResourceType, int32 Amount)
 		ResourceInventory.Add(ResourceType, GetResourceCapacity(ResourceType));
 	}
 
+	ResourcesChangedDelegate.Broadcast();
 	return true;
 }
 
@@ -105,15 +106,18 @@ bool AStrategyGameState::ConsumeResources(EResourceType ResourceType, int32 Amou
 	
 	ResourceInventory.Add(ResourceType, GetResourceAmount(ResourceType) - Amount);
 
+	ResourcesChangedDelegate.Broadcast();
 	return true;
 }
 
 void AStrategyGameState::IncreaseResourceStorage(EResourceType ResourceType, int32 IncreaseAmount)
 {
 	MaximumResources.Add(ResourceType, GetResourceCapacity(ResourceType) + IncreaseAmount);
+	ResourcesChangedDelegate.Broadcast();
 }
 
 void AStrategyGameState::DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount)
 {
 	MaximumResources.Add(ResourceType, FMath::Clamp(GetResourceCapacity(ResourceType) - DecreaseAmount, 0, GetResourceCapacity(ResourceType)));
+	ResourcesChangedDelegate.Broadcast();
 }

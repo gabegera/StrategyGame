@@ -58,9 +58,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_RotateCamera;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Mouse_RotateCamera;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_MouseInput;
-	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Cancel;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Zoom;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Select;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Cancel;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipRecycleTool;	
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipMoveTool;	
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_ExitMode;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -111,6 +113,10 @@ public:
 	void RTS_Select();
 	
 	void RTS_Cancel();
+	
+	void RTS_EquipRecycleTool();
+	
+	void RTS_EquipMoveTool();
 	
 	void RTS_ExitMode();
 
