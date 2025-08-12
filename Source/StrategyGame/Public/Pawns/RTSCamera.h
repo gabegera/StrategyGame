@@ -10,15 +10,16 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "RTSCamera.generated.h"
 
+class ARoad;
 class AStrategyGameState;
 class APlayerCharacter;
 
 UENUM()
 enum ERTSTool
 {
-	SelectTool		UMETA(DisplayName="Select Tool"),
-	RecycleTool		UMETA(DisplayName="Destroy Tool"),
-	MoveTool		UMETA(DisplayName="Move Tool"),
+	SelectTool			UMETA(DisplayName="Select Tool"),
+	RecycleTool			UMETA(DisplayName="Destroy Tool"),
+	RoadBuildingTool	UMETA(DisplayName="Road Building Tool"),
 };
 
 UCLASS()
@@ -88,6 +89,20 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Structure Building")
 	int32 SnappingSize = 50;
+
+	// ------ ROAD BUILDING ------
+
+	UPROPERTY() FVector RoadStartPos = FVector::ZeroVector;
+	UPROPERTY() FVector RoadEndPos = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ARoad> RoadClass_1x;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ARoad> RoadClass_2x;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ARoad> RoadClass_5x;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ARoad> RoadClass_10x;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -97,8 +112,6 @@ protected:
 
 	UFUNCTION()
 	virtual void OnResourcesChanged();
-
-	
 
 public:
 	
@@ -117,20 +130,14 @@ public:
 	
 	void CancelAction();
 	
-	void EquipRecycleTool();
-	
-	void EquipMoveTool();
-	
 	void BuildStructure();
 
-	UFUNCTION(BlueprintCallable)
-	void EnableSelectTool();
-	
-	UFUNCTION(BlueprintCallable)
-	void EnableDestroyTool();
+	void PlaceRoad();
+
+	void EquipRecycleTool();
 
 	UFUNCTION(BlueprintCallable)
-	void EnableMoveTool();
+	void EquipRoadBuildingTool();
 	
 	UFUNCTION(BlueprintCallable)
 	void ExitRTSMode();
@@ -149,6 +156,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	ABuildable* SetSelectedStructure(ABuildable* NewSelectedStructure) { return SelectedBuildable = NewSelectedStructure; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FVector SnapVectorToGrid(FVector InputPos, int32 GridSize);
 
 	// ------ GETTERS ------
 

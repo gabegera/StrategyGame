@@ -3,6 +3,7 @@
 
 #include "Pawns/RTSCamera.h"
 
+#include "Actors/Road.h"
 #include "Characters/PlayerCharacter.h"
 #include "Components/ArrowComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -32,8 +33,6 @@ void ARTSCamera::BeginPlay()
 
 	GetStrategyGameState()->ResourcesChangedDelegate.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
 	GetStrategyGameState()->ResourcesChangedDelegate.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
-
-	
 }
 
 void ARTSCamera::OnStructureSelected(ABuildable* Selected)
@@ -101,6 +100,12 @@ void ARTSCamera::SelectTarget()
 {
 	FHitResult Hit = LineTraceToMousePos(ECC_WorldDynamic);
 
+	if (CurrentRTSTool == ERTSTool::RoadBuildingTool)
+	{
+		PlaceRoad();
+		return;
+	}
+
 	if (SelectedBuildable && SelectedBuildable->IsBeingCreated())
 	{
 		BuildStructure();
@@ -117,9 +122,6 @@ void ARTSCamera::SelectTarget()
 		case RecycleTool:
 			Execute_Recycle(Hit.GetActor(), this);
 			break;
-		case MoveTool:
-			Execute_Move(Hit.GetActor(), this);
-			break;
 		}		
 	}
 }
@@ -135,17 +137,9 @@ void ARTSCamera::CancelAction()
 	if (CurrentRTSTool != ERTSTool::SelectTool)
 	{
 		CurrentRTSTool = SelectTool;
+		RoadStartPos = FVector::ZeroVector;
+		RoadEndPos = FVector::ZeroVector;
 	}
-}
-
-void ARTSCamera::EquipRecycleTool()
-{
-	CurrentRTSTool = ERTSTool::RecycleTool;
-}
-
-void ARTSCamera::EquipMoveTool()
-{
-	CurrentRTSTool = ERTSTool::MoveTool;
 }
 
 void ARTSCamera::BuildStructure()
@@ -157,19 +151,253 @@ void ARTSCamera::BuildStructure()
 	NewStructure->BeginConstruction();
 }
 
-void ARTSCamera::EnableSelectTool()
+void ARTSCamera::PlaceRoad()
 {
+	if (!RoadClass_1x.GetDefaultObject()) return;
 	
+	if (RoadStartPos == FVector::ZeroVector)
+	{
+		FVector StartPos = SnapVectorToGrid(LineTraceToMousePos(ECollisionChannel::ECC_GameTraceChannel1).ImpactPoint, SnappingSize);
+		RoadStartPos = StartPos;
+		return;
+	}
+	
+	if (RoadEndPos == FVector::ZeroVector)
+	{
+		FVector EndPos = SnapVectorToGrid(LineTraceToMousePos(ECollisionChannel::ECC_GameTraceChannel1).ImpactPoint, SnappingSize);
+
+		float XDistance = FMath::Abs(EndPos.X - RoadStartPos.X);
+		float YDistance = FMath::Abs(EndPos.Y - RoadStartPos.Y);
+
+		if (XDistance > YDistance)
+		{
+			RoadEndPos = FVector(EndPos.X, RoadStartPos.Y, EndPos.Z);
+		}
+		else 
+		{
+			RoadEndPos = FVector(RoadStartPos.X, EndPos.Y, EndPos.Z);
+		}
+	}
+	
+	TArray<ARoad*> SpawnedRoads;
+
+	// (↓) As an optimization I am dividing the roads into larger chunks so that there are fewer actors on screen (↓).
+	float RemainingRoadLength = FVector::Distance(RoadStartPos, RoadEndPos);
+	int32 NumberOf10xRoads = 0;
+	int32 NumberOf5xRoads = 0;
+	int32 NumberOf2xRoads = 0;
+	if (RemainingRoadLength > SnappingSize * 10)
+	{
+		NumberOf10xRoads = FMath::Floor(RemainingRoadLength / (SnappingSize * 10));
+		RemainingRoadLength -= NumberOf10xRoads * SnappingSize * 10;
+	}
+	if (RemainingRoadLength > SnappingSize * 5)
+	{
+		NumberOf5xRoads = FMath::Floor(RemainingRoadLength / (SnappingSize * 5));
+		RemainingRoadLength -= NumberOf5xRoads * SnappingSize * 5;
+	}
+	if (RemainingRoadLength > SnappingSize * 2)
+	{
+		NumberOf2xRoads = FMath::Floor(RemainingRoadLength / (SnappingSize * 2));
+		RemainingRoadLength -= NumberOf2xRoads * SnappingSize * 2;
+	}
+
+	FVector RoadSpawnPos = RoadStartPos;
+
+	// TODO: Need to tidy up all these loops and try to make them more legible.
+	
+	if (RoadEndPos.X == RoadStartPos.X && RoadEndPos.Y) // Build on Y Axis
+	{
+		if (RoadEndPos.Y > RoadStartPos.Y)
+		{
+			for (int i = 0; i < NumberOf10xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_10x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 180.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y += SnappingSize * 10;
+			}
+			for (int i = 0; i < NumberOf5xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_5x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 180.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y += SnappingSize * 5;
+			}
+			for (int i = 0; i < NumberOf2xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_2x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 180.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y += SnappingSize * 2;
+			}
+			
+			while (RoadEndPos.Y >= RoadSpawnPos.Y)
+            {
+                ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_1x);
+                NewRoad->SetActorLocation(RoadSpawnPos);
+                SpawnedRoads.Add(NewRoad);
+    
+            	RoadSpawnPos.Y += SnappingSize;
+            }
+		}
+		else
+		{
+			for (int i = 0; i < NumberOf10xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_10x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y -= SnappingSize * 10;
+			}
+			for (int i = 0; i < NumberOf5xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_5x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y -= SnappingSize * 5;
+			}
+			for (int i = 0; i < NumberOf2xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_2x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y -= SnappingSize * 2;
+			}
+			
+			while (RoadEndPos.Y < RoadSpawnPos.Y)
+            {
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_1x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.Y -= SnappingSize;
+            }
+		}
+	}
+	else if (RoadEndPos.Y == RoadStartPos.Y) // Build on X Axis
+	{
+		if (RoadEndPos.X > RoadStartPos.X)
+		{
+			for (int i = 0; i < NumberOf10xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_10x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X += SnappingSize * 10;
+			}
+			for (int i = 0; i < NumberOf5xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_5x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X += SnappingSize * 5;
+			}
+			for (int i = 0; i < NumberOf2xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_2x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X += SnappingSize * 2;
+			}
+			
+			while (RoadEndPos.X > RoadSpawnPos.X)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_1x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, 90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X += SnappingSize;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < NumberOf10xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_10x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X -= SnappingSize * 10;
+			}
+			for (int i = 0; i < NumberOf5xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_5x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X -= SnappingSize * 5;
+			}
+			for (int i = 0; i < NumberOf2xRoads; i++)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_2x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X -= SnappingSize * 2;
+			}
+			
+			while (RoadEndPos.X < RoadSpawnPos.X)
+			{
+				ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(RoadClass_1x);
+				NewRoad->SetActorLocation(RoadSpawnPos);
+				NewRoad->SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
+				SpawnedRoads.Add(NewRoad);
+    
+				RoadSpawnPos.X -= SnappingSize;
+			}
+		}
+	}
+
+	for (ARoad* Road : SpawnedRoads)
+	{
+		Road->SetConnectedRoads(SpawnedRoads);
+		Road->RemoveConnectedRoad(Road);
+	}
+
+	RoadStartPos = FVector::ZeroVector;
+	RoadEndPos = FVector::ZeroVector;
 }
 
-void ARTSCamera::EnableDestroyTool()
+void ARTSCamera::EquipRecycleTool()
 {
+	if (SelectedBuildable)
+	{
+		SelectedBuildable->Destroy();
+		SelectedBuildable = nullptr;
+	}
 	
+	CurrentRTSTool = ERTSTool::RecycleTool;
 }
 
-void ARTSCamera::EnableMoveTool()
+void ARTSCamera::EquipRoadBuildingTool()
 {
+	if (SelectedBuildable)
+	{
+		SelectedBuildable->Destroy();
+		SelectedBuildable = nullptr;
+	}
 	
+	CurrentRTSTool = ERTSTool::RoadBuildingTool;
 }
 
 void ARTSCamera::ExitRTSMode()
@@ -214,10 +442,9 @@ void ARTSCamera::MoveStructureToMousePos()
 	if (!SelectedBuildable) return;
 
 	FHitResult Hit = LineTraceToMousePos(ECC_GameTraceChannel1);
-
-	FVector NewLocation = Hit.ImpactPoint;
-	NewLocation = FVector(FMath::RoundToInt32(NewLocation.X / SnappingSize), FMath::RoundToInt32(NewLocation.Y / SnappingSize), NewLocation.Z);
-	NewLocation = FVector(NewLocation.X * SnappingSize, NewLocation.Y * SnappingSize, NewLocation.Z);
+	
+	FVector NewLocation = SnapVectorToGrid(Hit.ImpactPoint, SnappingSize);
+	
 	SelectedBuildable->SetActorLocation(NewLocation);
 }
 
@@ -236,56 +463,41 @@ void ARTSCamera::Tick(float DeltaTime)
 		UpdateZoom();
 	}
 
-	FString EquippedToolString = "Equipped Tool: ";
-	switch (CurrentRTSTool)
+	if (CurrentRTSTool == ERTSTool::RoadBuildingTool)
 	{
-	case SelectTool:
-		EquippedToolString.Append("Select Tool");
-		break;
-	case RecycleTool:
-		EquippedToolString.Append("Recycle Tool");
-		break;
-	case MoveTool:
-		EquippedToolString.Append("Move Tool");
-		break;
-	}
-	GEngine->AddOnScreenDebugMessage(929, 1.0f, FColor::White, EquippedToolString);
+		if (RoadStartPos != FVector::ZeroVector)
+		{
+			FVector EndPos = SnapVectorToGrid(LineTraceToMousePos(ECollisionChannel::ECC_GameTraceChannel1).ImpactPoint, SnappingSize);
 
-	// FString MetalString = "Metal: ";
-	// MetalString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Metal));
-	// MetalString.Append(" / ");
-	// MetalString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Metal));
-	// GEngine->AddOnScreenDebugMessage(930, 1.0f, FColor::White, MetalString);
-	//
-	// FString AlienMaterialString = "Alien Material: ";
-	// AlienMaterialString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::AlienMaterial));
-	// AlienMaterialString.Append(" / ");
-	// AlienMaterialString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::AlienMaterial));
-	// GEngine->AddOnScreenDebugMessage(931, 1.0f, FColor::White, AlienMaterialString);
-	//
-	// FString FoodString = "Food: ";
-	// FoodString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Food));
-	// FoodString.Append(" / ");
-	// FoodString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Food));
-	// GEngine->AddOnScreenDebugMessage(932, 1.0f, FColor::White, FoodString);
-	//
-	// FString PowerString = "Power: ";
-	// PowerString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Power));
-	// PowerString.Append(" / ");
-	// PowerString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Power));
-	// GEngine->AddOnScreenDebugMessage(933, 1.0f, FColor::White, PowerString);
-	//
-	// FString WorkersString = "Workers: ";
-	// WorkersString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Workers));
-	// WorkersString.Append(" / ");
-	// WorkersString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Workers));
-	// GEngine->AddOnScreenDebugMessage(934, 1.0f, FColor::White, WorkersString);
-	//
-	// FString ScientistsString = "Scientists: ";
-	// ScientistsString.AppendInt(GetStrategyGameState()->GetResourceAmount(EResourceType::Scientists));
-	// ScientistsString.Append(" / ");
-	// ScientistsString.AppendInt(GetStrategyGameState()->GetResourceCapacity(EResourceType::Scientists));
-	// GEngine->AddOnScreenDebugMessage(935, 1.0f, FColor::White, ScientistsString);
+			float XDistance = FMath::Abs(EndPos.X - RoadStartPos.X);
+			float YDistance = FMath::Abs(EndPos.Y - RoadStartPos.Y);
+
+			if (XDistance > YDistance)
+			{
+				RoadEndPos = FVector(EndPos.X, RoadStartPos.Y, EndPos.Z);
+				DrawDebugBox(GetWorld(), (RoadStartPos + RoadEndPos) / 2, FVector(XDistance / 2, SnappingSize / 2, 0.1f), FColor::Green);
+			}
+			else 
+			{
+				RoadEndPos = FVector(RoadStartPos.X, EndPos.Y, EndPos.Z);
+				DrawDebugBox(GetWorld(), (RoadStartPos + RoadEndPos) / 2, FVector(SnappingSize / 2, YDistance / 2, 0.1f), FColor::Green);
+			}
+		}
+		else
+		{
+			FVector Center = SnapVectorToGrid(LineTraceToMousePos(ECollisionChannel::ECC_GameTraceChannel1).ImpactPoint, SnappingSize);
+			DrawDebugSphere(GetWorld(), Center, 64.0f, 8, FColor::Green);
+		}
+	}
+}
+
+FVector ARTSCamera::SnapVectorToGrid(FVector InputPos, int32 GridSize)
+{
+	FVector Output = InputPos;
+	Output = FVector(FMath::RoundToInt32(Output.X / GridSize), FMath::RoundToInt32(Output.Y / GridSize), Output.Z);
+	Output = FVector(Output.X * GridSize, Output.Y * GridSize, Output.Z);
+
+	return Output;
 }
 
 ARTSPlayerController* ARTSCamera::GetPlayerController()

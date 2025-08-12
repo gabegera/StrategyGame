@@ -44,9 +44,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Components")
 	UBoxComponent* BuildableBounds;
 
-	UPROPERTY()
-	UArrowComponent* ForwardArrow;
-
 	// ------ STRUCTURE INFO ------
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Structure Info")
@@ -136,6 +133,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetDisplayName() { return DisplayName; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UStaticMeshComponent* GetStaticMesh() { return StaticMesh; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	EBuildableMode GetStructureMode() { return StructureMode; }

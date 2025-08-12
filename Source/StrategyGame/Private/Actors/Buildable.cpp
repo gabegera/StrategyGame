@@ -26,11 +26,6 @@ ABuildable::ABuildable()
     BuildableBounds->SetCollisionProfileName("Trigger");
     BuildableBounds->SetGenerateOverlapEvents(true);
 	BuildableBounds->SetLineThickness(20.0f);
-	
-	ForwardArrow = CreateDefaultSubobject<UArrowComponent>("Forward Arrow");
-	ForwardArrow->SetupAttachment(RootComponent);
-	ForwardArrow->SetArrowSize(15.0f);
-	ForwardArrow->SetScreenSize(15.0f);
 }
 
 void ABuildable::PostInitializeComponents()

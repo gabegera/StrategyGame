@@ -34,7 +34,7 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_RTS_Select, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Select);
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
 	Input->BindAction(Input_RTS_EquipRecycleTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRecycleTool);
-	Input->BindAction(Input_RTS_EquipMoveTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipMoveTool);
+	Input->BindAction(Input_RTS_EquipRoadTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRoadTool);
 	Input->BindAction(Input_RTS_ExitMode, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_ExitMode);
 }
 
@@ -222,11 +222,11 @@ void ARTSPlayerController::RTS_EquipRecycleTool()
 	GetRTSCamera()->EquipRecycleTool();
 }
 
-void ARTSPlayerController::RTS_EquipMoveTool()
+void ARTSPlayerController::RTS_EquipRoadTool()
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 
-	GetRTSCamera()->EquipMoveTool();
+	GetRTSCamera()->EquipRoadBuildingTool();
 }
 
 void ARTSPlayerController::RTS_ExitMode()

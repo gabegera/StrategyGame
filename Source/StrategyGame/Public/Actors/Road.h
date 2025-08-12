@@ -16,10 +16,27 @@ public:
 	ARoad();
 
 protected:
+
+	UPROPERTY()
+	TArray<ARoad*> ConnectedRoads;
+	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:
+
+	virtual bool Recycle_Implementation(ARTSCamera* DestroyInstigator) override;
+
+	virtual void UpdateBuildMaterials() override;
+	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable)
+	void SetConnectedRoads(TArray<ARoad*> NewConnectedRoads) { ConnectedRoads = NewConnectedRoads; }
+
+	UFUNCTION(BlueprintCallable)
+	void AddConnectedRoad(ARoad* RoadToAdd) { ConnectedRoads.Add(RoadToAdd); }
+	
+	void RemoveConnectedRoad(ARoad* RoadToRemove) { ConnectedRoads.Remove(RoadToRemove); ConnectedRoads.Shrink(); }
 };

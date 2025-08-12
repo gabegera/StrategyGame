@@ -18,6 +18,23 @@ void ARoad::BeginPlay()
 	
 }
 
+bool ARoad::Recycle_Implementation(ARTSCamera* DestroyInstigator)
+{
+	for (ARoad* Road : ConnectedRoads)
+	{
+		Road->Recycle();
+	}
+
+	Recycle();
+
+	return true;
+}
+
+void ARoad::UpdateBuildMaterials()
+{
+	
+}
+
 // Called every frame
 void ARoad::Tick(float DeltaTime)
 {
