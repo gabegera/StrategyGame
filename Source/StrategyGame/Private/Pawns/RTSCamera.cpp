@@ -3,7 +3,7 @@
 
 #include "Pawns/RTSCamera.h"
 
-#include "Actors/Road.h"
+#include "Actors/Building/Road.h"
 #include "Characters/PlayerCharacter.h"
 #include "Components/ArrowComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -98,7 +98,7 @@ void ARTSCamera::UpdateZoom()
 
 void ARTSCamera::SelectTarget()
 {
-	FHitResult Hit = LineTraceToMousePos(ECC_WorldDynamic);
+	FHitResult Hit = LineTraceToMousePos(ECC_Visibility);
 
 	if (CurrentRTSTool == ERTSTool::RoadBuildingTool)
 	{
@@ -455,7 +455,7 @@ void ARTSCamera::Tick(float DeltaTime)
 
 	if (SelectedBuildable && SelectedBuildable->IsBeingCreated())
 	{
-		MoveStructureToMousePos();
+		MoveStructureToMousePos(); 
 	}
 
 	if (SpringArm->TargetArmLength != ZoomDistanceTarget)
@@ -468,6 +468,7 @@ void ARTSCamera::Tick(float DeltaTime)
 		if (RoadStartPos != FVector::ZeroVector)
 		{
 			FVector EndPos = SnapVectorToGrid(LineTraceToMousePos(ECollisionChannel::ECC_GameTraceChannel1).ImpactPoint, SnappingSize);
+			
 
 			float XDistance = FMath::Abs(EndPos.X - RoadStartPos.X);
 			float YDistance = FMath::Abs(EndPos.Y - RoadStartPos.Y);

@@ -35,7 +35,14 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
 	Input->BindAction(Input_RTS_EquipRecycleTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRecycleTool);
 	Input->BindAction(Input_RTS_EquipRoadTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRoadTool);
-	Input->BindAction(Input_RTS_ExitMode, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_ExitMode);
+
+	// TURRET INPUT
+	Input->BindAction(Input_Turret_Look, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Look);
+	Input->BindAction(Input_Turret_Fire, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Fire);
+	Input->BindAction(Input_Turret_Aim, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Aim);
+	Input->BindAction(Input_Turret_Reload, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Reload);
+
+	Input->BindAction(Input_ReturnToFirstPerson, ETriggerEvent::Triggered, this, &ARTSPlayerController::ReturnToFirstPerson);
 }
 
 void ARTSPlayerController::BeginPlay()
@@ -111,7 +118,7 @@ void ARTSPlayerController::FP_Interact()
 {
 	if (ControllerMode != EControllerMode::FirstPerson) return;
 	
-	GetPlayerCharacter()->Interact();
+	GetPlayerCharacter()->TriggerInteraction();
 }
 
 void ARTSPlayerController::RTS_Move(const FInputActionInstance& Instance)
@@ -229,11 +236,46 @@ void ARTSPlayerController::RTS_EquipRoadTool()
 	GetRTSCamera()->EquipRoadBuildingTool();
 }
 
-void ARTSPlayerController::RTS_ExitMode()
+void ARTSPlayerController::ReturnToFirstPerson()
 {
-	if (ControllerMode != EControllerMode::RTS) return;
-	
-	GetRTSCamera()->ExitRTSMode();
+	switch (ControllerMode)
+	{
+	case EControllerMode::RTS:
+		GetRTSCamera()->ExitRTSMode();
+		break;
+	case EControllerMode::Turret:
+		GetPlayerCharacter()->Exit();
+		break;
+	default:
+		break;
+	}
+}
+
+void ARTSPlayerController::Turret_Look(const FInputActionInstance& Instance)
+{
+	if (ControllerMode != EControllerMode::Turret) return;
+
+	FVector2D Value = Instance.GetValue().Get<FVector2D>();
+	Value *= Turret_MouseSensitivity;
+
+	GetPlayerCharacter()->GetControlledTurret()->Look(Value);
+}
+
+void ARTSPlayerController::Turret_Fire()
+{
+	if (ControllerMode != EControllerMode::Turret) return;
+
+	GetPlayerCharacter()->GetControlledTurret()->Fire();
+}
+
+void ARTSPlayerController::Turret_Aim()
+{
+	if (ControllerMode != EControllerMode::Turret) return;
+}
+
+void ARTSPlayerController::Turret_Reload()
+{
+	if (ControllerMode != EControllerMode::Turret) return;
 }
 
 APlayerCharacter* ARTSPlayerController::GetPlayerCharacter()

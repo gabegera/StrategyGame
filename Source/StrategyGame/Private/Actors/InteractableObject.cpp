@@ -3,8 +3,6 @@
 
 #include "Actors/InteractableObject.h"
 
-#include "GameStates/StrategyGameState.h"
-
 // Sets default values
 AInteractableObject::AInteractableObject()
 {
@@ -21,9 +19,17 @@ void AInteractableObject::BeginPlay()
 	
 }
 
-bool AInteractableObject::Interact_Implementation(APlayerCharacter* InteractInstigator)
+void AInteractableObject::OnInteract(APlayerCharacter* InteractInstigator)
 {
-	return IInteractionInterface::OnInteract_Implementation(InteractInstigator);
+	GEngine->AddOnScreenDebugMessage(20, 3.0f, FColor::Yellow, GetName() + " Interacted With");
+}
+
+bool AInteractableObject::Interact(APlayerCharacter* InteractInstigator)
+{
+	OnInteract(InteractInstigator);
+	BP_OnInteract(InteractInstigator);
+	
+	return IInteractionInterface::Interact(InteractInstigator);
 }
 
 // Called every frame

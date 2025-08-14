@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/SphereComponent.h"
 #include "GameStates/StrategyGameState.h"
-#include "CustomActor.h"
+#include "Actors/CustomActor.h"
 #include "ResourceNode.generated.h"
 
 class ABuildable;

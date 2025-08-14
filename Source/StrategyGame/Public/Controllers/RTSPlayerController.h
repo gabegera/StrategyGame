@@ -18,7 +18,8 @@ UENUM(BlueprintType)
 enum class EControllerMode : uint8
 {
 	FirstPerson UMETA(DisplayName="First Person Mode"),
-	RTS UMETA(DisplayName="RTS Mode"),
+	RTS			UMETA(DisplayName="RTS Mode"),
+	Turret		UMETA(DisplayName="Turret Mode"),
 };
 
 UCLASS()
@@ -46,8 +47,7 @@ protected:
 	// Default Mapping Context used for Enhanced Input.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	TSoftObjectPtr<UInputMappingContext> PlayerInputMapping;
-
-
+	
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Move;
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Look;
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Sprint;
@@ -63,10 +63,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Cancel;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipRecycleTool;	
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipRoadTool;	
-	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_ExitMode;
+	
+	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Look;
+	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Fire;
+	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Aim;
+	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Reload;
+
+	UPROPERTY(EditAnywhere, Category = "Input") UInputAction* Input_ReturnToFirstPerson;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	float FP_MouseSensitivity = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	float Turret_MouseSensitivity = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	float RTS_PanSensitivity = 1.0f;
@@ -88,6 +97,8 @@ protected:
 
 public:
 
+	// ------ FIRST PERSON FUNCTIONS ------
+	
 	void FP_Move(const FInputActionInstance& Instance);
 	
 	void FP_Look(const FInputActionInstance& Instance);
@@ -97,6 +108,8 @@ public:
 	void FP_StopSprinting();
 	
 	void FP_Interact();
+
+	// ------ RTS FUNCTIONS ------
 
 	void RTS_Move(const FInputActionInstance& Instance);
 
@@ -118,7 +131,17 @@ public:
 	
 	void RTS_EquipRoadTool();
 	
-	void RTS_ExitMode();
+	void ReturnToFirstPerson();
+
+	// ------ TURRET FUNCTIONS ------
+
+	void Turret_Look(const FInputActionInstance& Instance);
+
+	void Turret_Fire();
+
+	void Turret_Aim();
+
+	void Turret_Reload();
 
 	// ------ GETTERS ------
 

@@ -15,13 +15,14 @@ APlayerCharacter::APlayerCharacter()
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 
-	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
-	FirstPersonCamera->SetRelativeLocation(FVector(-10.f, 0.f, 60.f)); // Position the camera
-	FirstPersonCamera->bUsePawnControlRotation = true;
-
-	GetMesh()->SetupAttachment(FirstPersonCamera);
+	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, 90.0f));
+	GetMesh()->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
 	
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	FirstPersonCamera->SetupAttachment(GetMesh(), "Head");
+	FirstPersonCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 20.0f));
+	FirstPersonCamera->SetRelativeRotation(FRotator(90.0f, 90.0f, 0.0f));
+	FirstPersonCamera->bUsePawnControlRotation = true;
 }
 
 // Called when the game starts or when spawned
@@ -67,11 +68,11 @@ void APlayerCharacter::StopSprinting()
 	GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
 }
 
-void APlayerCharacter::Interact()
+void APlayerCharacter::TriggerInteraction()
 {
-	if (TargetInteractable == nullptr) return;
+	if (!TargetInteractable) return;
 
-	Execute_OnInteract(TargetInteractable, this);
+	Cast<IInteractionInterface>(TargetInteractable)->Interact(this);
 }
 
 void APlayerCharacter::CheckForInteractable()
@@ -85,7 +86,7 @@ void APlayerCharacter::CheckForInteractable()
 	ActorsToIgnore.Add(this);
 	bool IgnoreSelf = true;
 
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), TraceStart, TraceEnd, InteractionRadius, UEngineTypes::ConvertToTraceType(ECC_WorldDynamic),
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), TraceStart, TraceEnd, InteractionRadius, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		TraceComplex, ActorsToIgnore, EDrawDebugTrace::None, Hit, IgnoreSelf);
 
 	if (Hit.GetActor() && Hit.GetActor()->Implements<UInteractionInterface>())
@@ -103,6 +104,20 @@ void APlayerCharacter::SwitchToRTSCam(ARTSCamera* TargetCamera)
 	if (!TargetCamera) return;
 	
 	GetPlayerController()->Possess(TargetCamera);
+}
+
+void APlayerCharacter::EnterSeat(AActor* Seat)
+{
+    SetActorEnableCollision(false);
+    SetActorLocation(Seat->GetActorLocation() + Seat->GetActorUpVector() * GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    GetPlayerController()->SetControlRotation(Seat->GetActorRotation());
+}
+
+void APlayerCharacter::Exit()
+{
+	GetPlayerController()->SetControllerMode(EControllerMode::FirstPerson);
+	SetControlledTurret(nullptr);
+	SetActorEnableCollision(true);
 }
 
 // Called every frame

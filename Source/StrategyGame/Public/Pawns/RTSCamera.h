@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Actors/Buildable.h"
+#include "Actors/Building/Buildable.h"
 #include "Camera/CameraComponent.h"
 #include "Controllers/RTSPlayerController.h"
 #include "GameFramework/Pawn.h"

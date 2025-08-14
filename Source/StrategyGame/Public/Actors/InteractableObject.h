@@ -26,9 +26,13 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnInteract")
+	void BP_OnInteract(APlayerCharacter* InteractInstigator);
+	virtual void OnInteract(APlayerCharacter* InteractInstigator);
+
 public:
-	
-	virtual bool Interact_Implementation(APlayerCharacter* InteractInstigator);
+
+	virtual bool Interact(APlayerCharacter* InteractInstigator) override;
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

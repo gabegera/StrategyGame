@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Actors/InteractableObject.h"
+#include "Actors/Turrets/RemoteControlTurret.h"
 #include "Camera/CameraComponent.h"
 #include "Components/HealthComponent.h"
 #include "Controllers/RTSPlayerController.h"
@@ -24,7 +25,7 @@ public:
 	APlayerCharacter();
 
 protected:
-
+	
 	UPROPERTY() ARTSPlayerController* RTSPlayerController;
 
 	UPROPERTY(EditAnywhere)
@@ -53,6 +54,8 @@ protected:
 	UPROPERTY() AActor* TargetInteractable;
 	UPROPERTY() FTimerHandle InteractionTimer;
 
+	UPROPERTY() ARemoteControlTurret* ControlledTurret = nullptr;
+
 	// How many times per second will there be a check for an interactable.
 	UPROPERTY(EditAnywhere)
 	int32 InteractionChecksPerSecond = 60.0f;
@@ -62,6 +65,11 @@ protected:
 
 	UPROPERTY(EditAnywhere)
 	float InteractionRadius = 32.0f;
+
+	// ------ ANIMATION ------
+	
+	UPROPERTY(BlueprintReadWrite)
+	UAnimationAsset* AnimationOverride = nullptr;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -78,18 +86,28 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void StopSprinting();
-	
+
+	// Attempts to send an interact Interface Function to the target Interactable.
 	UFUNCTION(BlueprintCallable)
-	void Interact();
+	void TriggerInteraction();
 	
 	UFUNCTION(BlueprintCallable)
 	void CheckForInteractable();
 
 	UFUNCTION(BlueprintCallable)
 	void SwitchToRTSCam(ARTSCamera* TargetCamera);
+
+	UFUNCTION(BlueprintCallable)
+	void EnterSeat(AActor* Seat);
+
+	UFUNCTION(BlueprintCallable)
+	void Exit();
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable)
+	ARemoteControlTurret* SetControlledTurret(ARemoteControlTurret* NewTurret) { return ControlledTurret = NewTurret; }	
 
 	// ------ GETTERS ------
 
@@ -101,6 +119,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UCameraComponent* GetFirstPersonCamera() { return FirstPersonCamera; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	ARemoteControlTurret* GetControlledTurret() { return ControlledTurret; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsSprinting() { return GetCharacterMovement()->MaxWalkSpeed == MaxSprintSpeed; }
