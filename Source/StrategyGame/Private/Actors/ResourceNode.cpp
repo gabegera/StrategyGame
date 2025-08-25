@@ -12,13 +12,8 @@ AResourceNode::AResourceNode()
 
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>("Static Mesh");
 	StaticMesh->SetupAttachment(RootComponent);
-	StaticMesh->SetCollisionProfileName("NoCollision");
-	StaticMesh->SetGenerateOverlapEvents(false);
-
-	SphereTrigger = CreateDefaultSubobject<USphereComponent>("Sphere Trigger");
-	SphereTrigger->SetupAttachment(StaticMesh);
-	SphereTrigger->SetCollisionProfileName("Trigger");
-	SphereTrigger->SetGenerateOverlapEvents(true);
+	StaticMesh->SetCollisionProfileName("SelectableObject");
+	StaticMesh->SetGenerateOverlapEvents(true);
 }
 
 // Called when the game starts or when spawned

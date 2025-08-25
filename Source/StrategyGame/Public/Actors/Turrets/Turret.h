@@ -22,6 +22,9 @@ protected:
 
 	// ------ COMPONENTS ------
 
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* SceneComponent = nullptr;
+
 	UPROPERTY(EditAnywhere)
 	USkeletalMeshComponent* SkeletalMesh = nullptr;
 

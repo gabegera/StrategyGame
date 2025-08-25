@@ -13,8 +13,11 @@ ATurret::ATurret()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	SceneComponent = CreateDefaultSubobject<USceneComponent>("Root");
+	SetRootComponent(SceneComponent);
+
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>("Skeletal Mesh");
-	SkeletalMesh->SetupAttachment(RootComponent);
+	SkeletalMesh->SetupAttachment(SceneComponent);
 
 	Arrow = CreateDefaultSubobject<UArrowComponent>("ProjectileSpawnPos");
 	Arrow->SetupAttachment(SkeletalMesh);
@@ -24,7 +27,6 @@ ATurret::ATurret()
 void ATurret::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void ATurret::Fire()
@@ -53,7 +55,7 @@ void ATurret::ShootProjectile(FVector Target)
 {
 	if (!IsValid(Projectile)) return;
 
-	FVector TargetDirection = Target - GetArrowComponent()->GetComponentLocation();
+	FVector TargetDirection = Target - Arrow->GetComponentLocation();
 	TargetDirection.Normalize();
 
 	if (ProjectileCount < 1) ProjectileCount = 1;
@@ -64,7 +66,7 @@ void ATurret::ShootProjectile(FVector Target)
 		SpawnedProjectile->AddActorToIgnore(this);
 		SpawnedProjectile->SetInstigator(GetInstigator());
 		SpawnedProjectile->SetSpawner(this);
-		SpawnedProjectile->SetActorLocation(GetArrowComponent()->GetComponentLocation());
+		SpawnedProjectile->SetActorLocation(Arrow->GetComponentLocation());
 		SpawnedProjectile->GetProjectileMovement()->Velocity = TargetDirection * ProjectileSpeed;
 		SpawnedProjectile->SetDamage(Damage);
 		SpawnedProjectile->SetKnockbackForceMultiplier(KnockbackForceMultiplier);

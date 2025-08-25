@@ -33,8 +33,8 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_RTS_Zoom, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Zoom);
 	Input->BindAction(Input_RTS_Select, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Select);
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
+	Input->BindAction(Input_RTS_RotateBuilding, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_RotateBuilding);
 	Input->BindAction(Input_RTS_EquipRecycleTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRecycleTool);
-	Input->BindAction(Input_RTS_EquipRoadTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRoadTool);
 
 	// TURRET INPUT
 	Input->BindAction(Input_Turret_Look, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Look);
@@ -50,16 +50,16 @@ void ARTSPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	if (ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player))
+    {
+    	if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
     	{
-    		if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
-    		{
-    			InputSystem->ClearAllMappings();
+    		InputSystem->ClearAllMappings();
 
-    			InputSystem->AddMappingContext(PlayerInputMapping.LoadSynchronous(), 0);
-    		}
-    
-    		SetupPlayerInputComponent(InputComponent);
+    		InputSystem->AddMappingContext(PlayerInputMapping.LoadSynchronous(), 0);
     	}
+
+    	SetupPlayerInputComponent(InputComponent);
+    }
 }
 
 void ARTSPlayerController::OnPossess(APawn* InPawn)
@@ -195,8 +195,6 @@ void ARTSPlayerController::RTS_MouseInput(const FInputActionInstance& Instance)
 	{
 		GetRTSCamera()->RotateCamera(-Value.X * RTS_RotateSensitivity);
 	}
-
-	
 }
 
 void ARTSPlayerController::RTS_Zoom(const FInputActionInstance& Instance)
@@ -222,18 +220,18 @@ void ARTSPlayerController::RTS_Cancel()
 	GetRTSCamera()->CancelAction();
 }
 
+void ARTSPlayerController::RTS_RotateBuilding()
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	GetRTSCamera()->RotateBuilding();
+}
+
 void ARTSPlayerController::RTS_EquipRecycleTool()
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 
 	GetRTSCamera()->EquipRecycleTool();
-}
-
-void ARTSPlayerController::RTS_EquipRoadTool()
-{
-	if (ControllerMode != EControllerMode::RTS) return;
-
-	GetRTSCamera()->EquipRoadBuildingTool();
 }
 
 void ARTSPlayerController::ReturnToFirstPerson()

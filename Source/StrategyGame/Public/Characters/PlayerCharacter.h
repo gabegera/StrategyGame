@@ -28,10 +28,10 @@ protected:
 	
 	UPROPERTY() ARTSPlayerController* RTSPlayerController;
 
-	UPROPERTY(EditAnywhere)
-	UCameraComponent* FirstPersonCamera;
+	UPROPERTY(EditAnywhere, Category="Components")
+	UCameraComponent* FirstPersonCamera = nullptr;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Components")
 	UHealthComponent* HealthComponent = nullptr;
 
 	// ------ MOVEMENT ------

@@ -20,10 +20,8 @@ enum class EBuildableMode : uint8
 	Complete			UMETA(DisplayName="Complete"),
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableSelectedDelegate, ABuildable*, NewBuildable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructurePlacedDelegate, ABuildable*, NewBuildable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableRecycledDelegate, ABuildable*, NewBuildable);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableMovedDelegate, ABuildable*, NewBuildable);
 
 UCLASS()
 class STRATEGYGAME_API ABuildable : public ACustomActor, public IBuildingInterface
@@ -37,12 +35,19 @@ public:
 protected:
 
 	// ------ COMPONENTS ------
+
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* SceneComponent;
 	
-	UPROPERTY(EditAnywhere, Category="Components")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
 	UStaticMeshComponent* StaticMesh = nullptr;
 
-	UPROPERTY(EditAnywhere, Category="Components")
-	UBoxComponent* BuildableBounds;
+	// A Mesh to show during building construction which direction is forward.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
+	UStaticMeshComponent* ForwardIdentifierMesh = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
+	UBoxComponent* BuildingBounds;
 
 	// ------ STRUCTURE INFO ------
 
@@ -53,6 +58,7 @@ protected:
 	UPROPERTY() EBuildableMode StructureMode = EBuildableMode::BeingCreated;
 	UPROPERTY() TArray<AActor*> OverlappingExclusionZones;
 	UPROPERTY() TArray<AActor*> OverlappingResourceNodes;
+	UPROPERTY() TArray<AActor*> OverlappingRoads;
 	UPROPERTY() AResourceNode* TargetResourceNode;
 
 	// ------ CONSTRUCTION ------
@@ -84,11 +90,11 @@ protected:
 	TMap<EResourceType, int32> ConstructionCost;
 
 	// ------ PROTECTED FUNCTIONS ------
-
-	virtual void PostInitializeComponents() override;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 	virtual void BeginDestroy() override;
 
@@ -99,21 +105,20 @@ protected:
 
 public:
 
-	// ------ DELEGATES ------
-	
-	UPROPERTY(BlueprintAssignable, BlueprintCallable)
-	FBuildableSelectedDelegate BuildableSelectedDelegate;
-	UPROPERTY(BlueprintAssignable, BlueprintCallable)
-	FBuildableRecycledDelegate BuildableRecycledDelegate;
-
 	// ------ INTERFACE FUNCTIONS ------
-
-	virtual bool Select_Implementation(ARTSCamera* SelectInstigator) override;
+	
 	virtual bool Recycle_Implementation(ARTSCamera* RecycleInstigator) override;
 
-	// Begins building the structure.
+	UFUNCTION(BlueprintCallable)
+	virtual void MoveBuilding(FVector NewLocation);
+	
+	UFUNCTION(BlueprintCallable)
+	virtual void PlaceBuilding();
+	
+	// Function to be called when the building is placed.
 	UFUNCTION(BlueprintCallable)
 	virtual void BeginConstruction();
+	
 	// If the structure is being built, cancels it and gets the materials back.
 	UFUNCTION(BlueprintCallable)
 	virtual void CancelConstruction();
@@ -160,7 +165,7 @@ public:
 	bool IsOverlappingResourceNode() { return !OverlappingResourceNodes.IsEmpty(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsConnectedToRoad();
+	bool IsConnectedToRoad() { return !OverlappingRoads.IsEmpty(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	virtual bool IsBuildingPermitted();

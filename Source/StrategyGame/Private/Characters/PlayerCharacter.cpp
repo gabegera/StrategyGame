@@ -111,6 +111,7 @@ void APlayerCharacter::EnterSeat(AActor* Seat)
     SetActorEnableCollision(false);
     SetActorLocation(Seat->GetActorLocation() + Seat->GetActorUpVector() * GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
     GetPlayerController()->SetControlRotation(Seat->GetActorRotation());
+	FirstPersonCamera->bUsePawnControlRotation = false;
 }
 
 void APlayerCharacter::Exit()
@@ -118,6 +119,8 @@ void APlayerCharacter::Exit()
 	GetPlayerController()->SetControllerMode(EControllerMode::FirstPerson);
 	SetControlledTurret(nullptr);
 	SetActorEnableCollision(true);
+	GetMesh()->SetAnimation(nullptr);
+	FirstPersonCamera->bUsePawnControlRotation = true;
 }
 
 // Called every frame

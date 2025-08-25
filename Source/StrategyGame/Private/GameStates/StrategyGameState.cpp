@@ -3,42 +3,113 @@
 
 #include "GameStates/StrategyGameState.h"
 
+#include "Actors/Building/Structure.h"
+#include "Kismet/GameplayStatics.h"
+
 
 AStrategyGameState::AStrategyGameState()
 {
 	ResourceInventory.Add(EResourceType::Metal, 60);
 	ResourceInventory.Add(EResourceType::AlienMaterial, 0);
 	ResourceInventory.Add(EResourceType::Food, 20);
-	ResourceInventory.Add(EResourceType::Power, 200);
-	ResourceInventory.Add(EResourceType::Workers, 20);
-	ResourceInventory.Add(EResourceType::Scientists, 5);
+	ResourceInventory.Add(EResourceType::Power, 0);
 
 	MaximumResources.Add(EResourceType::Metal, 100);
 	MaximumResources.Add(EResourceType::AlienMaterial, 20);
 	MaximumResources.Add(EResourceType::Food, 100);
 	MaximumResources.Add(EResourceType::Power, 200);
-	MaximumResources.Add(EResourceType::Workers, 20);
-	MaximumResources.Add(EResourceType::Scientists, 5);
+
+	Population.Add(EWorkerType::Worker, 100);
+	Population.Add(EWorkerType::Scientist, 20);
+
+	StructureBuiltDelegate.AddUniqueDynamic(this, &ThisClass::OnStructureBuilt);
+	StructureDestroyedDelegate.AddUniqueDynamic(this, &ThisClass::OnStructureDestroyed);
 }
 
 void AStrategyGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
+	ClampResources();
+
+	BuiltStructures = FindAllStructures();
+}
+
+void AStrategyGameState::OnStructureBuilt(AStructure* BuiltStructure)
+{
+	BuiltStructures.AddUnique(BuiltStructure);
+}
+
+void AStrategyGameState::OnStructureDestroyed(AStructure* BuiltStructure)
+{
+	BuiltStructures.Remove(BuiltStructure);
+	BuiltStructures.Shrink();
+}
+
+void AStrategyGameState::ClampResources()
+{
 	for (auto Resource : ResourceInventory)
 	{
 		EResourceType ResourceType = Resource.Key;
-		int32 Amount = Resource.Value;
+		float Amount = Resource.Value;
 		
 		if (Amount > GetResourceCapacity(ResourceType))
 		{
 			ResourceInventory.Add(ResourceType, GetResourceCapacity(ResourceType));
 		}
+		else if (Amount < 0)
+		{
+			ResourceInventory.Add(ResourceType, 0);
+		}
 	}
 }
 
-bool AStrategyGameState::AddResources(EResourceType ResourceType, int32 Amount)
+TArray<AStructure*> AStrategyGameState::FindAllStructures()
 {
+	TArray<AActor*> FoundStructures;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStructure::StaticClass(), FoundStructures);
+
+	TArray<AStructure*> OutArray;
+	for (AActor* FoundStructure : FoundStructures)
+	{
+		OutArray.AddUnique(Cast<AStructure>(FoundStructure));
+	}
+
+	return OutArray;
+}
+
+int32 AStrategyGameState::GetEmployedPopulation(EWorkerType WorkerType)
+{
+	int32 EmployedWorkers = 0;
+	for (auto Structure : BuiltStructures)
+	{
+		EmployedWorkers += Structure->GetWorkerCount(WorkerType);
+	}
+
+	return EmployedWorkers;
+}
+
+int32 AStrategyGameState::GetTotalEmployedPopulation()
+{
+	int32 EmployedWorkers = 0;
+	for (auto Structure : BuiltStructures)
+	{
+		EmployedWorkers += Structure->GetTotalWorkers();
+	}
+
+	return EmployedWorkers;
+}
+
+int32 AStrategyGameState::GetHomelessPopulation()
+{
+	if (GetTotalPopulation() < PopulationCapacity) return 0;
+
+	return GetTotalPopulation() - PopulationCapacity;
+}
+
+float AStrategyGameState::AddResources(EResourceType ResourceType, float Amount)
+{
+	// Prints a debug message and returns if the resource storage is full.
 	if (GetResourceAmount(ResourceType) == GetResourceCapacity(ResourceType))
 	{
 		switch (ResourceType)
@@ -55,29 +126,21 @@ bool AStrategyGameState::AddResources(EResourceType ResourceType, int32 Amount)
 		case EResourceType::Power:
 			GEngine->AddOnScreenDebugMessage(903, 3.0f, FColor::Red, "POWER capacity is full.");
 			break;
-		case EResourceType::Workers:
-			GEngine->AddOnScreenDebugMessage(904, 3.0f, FColor::Red, "WORKER capacity is full.");
-			break;
-		case EResourceType::Scientists:
-			GEngine->AddOnScreenDebugMessage(905, 3.0f, FColor::Red, "SCIENTIST capacity is full.");
-			break;
 		}
-		return false;
+		return GetResourceAmount(ResourceType);
 	}
 	
 	ResourceInventory.Add(ResourceType, GetResourceAmount(ResourceType) + Amount);
 
-	if (GetResourceAmount(ResourceType) > GetResourceCapacity(ResourceType))
-	{
-		ResourceInventory.Add(ResourceType, GetResourceCapacity(ResourceType));
-	}
+	ClampResources();
 
 	ResourcesChangedDelegate.Broadcast();
-	return true;
+	return GetResourceAmount(ResourceType);
 }
 
-bool AStrategyGameState::ConsumeResources(EResourceType ResourceType, int32 Amount)
+float AStrategyGameState::ConsumeResources(EResourceType ResourceType, float Amount)
 {
+	// Prints a debug message and returns if attempting to remove more resources than are currently available.
 	if (GetResourceAmount(ResourceType) - Amount < 0)
 	{
 		switch (ResourceType)
@@ -94,30 +157,58 @@ bool AStrategyGameState::ConsumeResources(EResourceType ResourceType, int32 Amou
 		case EResourceType::Power:
 			GEngine->AddOnScreenDebugMessage(909, 3.0f, FColor::Red, "Attempted to remove more POWER than was available.");
 			break;
-		case EResourceType::Workers:
-			GEngine->AddOnScreenDebugMessage(910, 3.0f, FColor::Red, "Attempted to remove more WORKERS than was available.");
-			break;
-		case EResourceType::Scientists:
-			GEngine->AddOnScreenDebugMessage(911, 3.0f, FColor::Red, "Attempted to remove more SCIENTISTS than was available.");
-			break;
 		}
-		return false;
+		return GetResourceAmount(ResourceType);
 	}
 	
 	ResourceInventory.Add(ResourceType, GetResourceAmount(ResourceType) - Amount);
 
+	ClampResources();
+
 	ResourcesChangedDelegate.Broadcast();
-	return true;
+	return GetResourceAmount(ResourceType);
 }
 
-void AStrategyGameState::IncreaseResourceStorage(EResourceType ResourceType, int32 IncreaseAmount)
+int32 AStrategyGameState::IncreaseResourceStorage(EResourceType ResourceType, int32 IncreaseAmount)
 {
 	MaximumResources.Add(ResourceType, GetResourceCapacity(ResourceType) + IncreaseAmount);
+	ClampResources();
 	ResourcesChangedDelegate.Broadcast();
+	return GetResourceCapacity(ResourceType);
 }
 
-void AStrategyGameState::DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount)
+int32 AStrategyGameState::DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount)
 {
 	MaximumResources.Add(ResourceType, FMath::Clamp(GetResourceCapacity(ResourceType) - DecreaseAmount, 0, GetResourceCapacity(ResourceType)));
+	ClampResources();
 	ResourcesChangedDelegate.Broadcast();
+	return GetResourceCapacity(ResourceType);
+}
+
+int32 AStrategyGameState::IncreasePopulation(EWorkerType WorkerType, int32 IncreaseAmount)
+{
+	Population.Add(WorkerType, GetPopulation(WorkerType) + IncreaseAmount);
+
+	PopulationChangedDelegate.Broadcast();
+	return GetPopulation(WorkerType);
+}
+
+int32 AStrategyGameState::DecreasePopulation(EWorkerType WorkerType, int32 DecreaseAmount)
+{
+	Population.Add(WorkerType, GetPopulation(WorkerType) - DecreaseAmount);
+
+	PopulationChangedDelegate.Broadcast();
+	return GetPopulation(WorkerType);
+}
+
+int32 AStrategyGameState::IncreasePopulationCapacity(int32 IncreaseAmount)
+{
+	PopulationChangedDelegate.Broadcast();
+	return PopulationCapacity += IncreaseAmount;
+}
+
+int32 AStrategyGameState::DecreasePopulationCapacity(int32 DecreaseAmount)
+{
+	PopulationChangedDelegate.Broadcast();
+	return PopulationCapacity = FMath::Clamp(PopulationCapacity - DecreaseAmount, 0, PopulationCapacity);
 }

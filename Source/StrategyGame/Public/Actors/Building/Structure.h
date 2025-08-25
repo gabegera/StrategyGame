@@ -43,6 +43,17 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Storage", meta=(EditCondition="bIncreasesStorageCapacity", EditConditionHides))
 	TMap<EResourceType, int32> ResourcesToIncreaseStorage;
+
+	// ------ WORKERS ------
+
+	// If true makes it so that the only workers that can be assigned are scientists.
+	UPROPERTY(EditAnywhere)
+	bool bRequiresScientists = false;
+	
+	UPROPERTY() TMap<EWorkerType, int32> AssignedWorkers;
+
+	UPROPERTY(EditAnywhere)
+	int32 MaxWorkerCapacity = 20;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -51,6 +62,8 @@ protected:
 	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 
 public:
+
+	virtual bool Select_Implementation(ARTSCamera* SelectInstigator) override;
 
 	UFUNCTION(BlueprintCallable)
 	void ActivateStructureEffects();
@@ -81,6 +94,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void BeginDrainingResourceFromNode();
 	void DrainResourceFromNode();
+	
+	UFUNCTION(BlueprintCallable)
+	void AssignWorkers(EWorkerType WorkerType, int32 Amount);
+	UFUNCTION(BlueprintCallable)
+	void AddMaxWorkers(EWorkerType WorkerType);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveWorkers(EWorkerType WorkerType, int32 Amount);
+	UFUNCTION(BlueprintCallable)
+	void RemoveAllWorkers();
 
 	virtual void UpdateBuildMaterials() override;
 	
@@ -90,8 +113,29 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool ConsumesResourcesFromNearbyNode() { return bConsumesResourceFromNearbyNode; }
 
+	virtual bool IsBuildingPermitted() override;
 	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsBuildingPermitted")
 	bool BP_IsBuildingPermitted() { return IsBuildingPermitted(); }
 	
-	virtual bool IsBuildingPermitted() override;
+
+	// ------ GETTERS ------
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
+	int32 GetWorkerCount(EWorkerType WorkerType) { return AssignedWorkers.FindRef(WorkerType); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
+	int32 GetMaxWorkerCapacity() { return MaxWorkerCapacity; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
+	int32 GetTotalWorkers() { return GetWorkerCount(EWorkerType::Worker) + GetWorkerCount(EWorkerType::Scientist); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
+	int32 GetAvailableWorkersSlots() { return GetMaxWorkerCapacity() - GetTotalWorkers(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
+	bool IsWorkerCapacityFull() { return GetAvailableWorkersSlots() <= 0; }
+
+	// Returns a value between 0 and 1 based on how many workers are assigned to the structure.
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
+	float GetWorkerEfficiency() { return static_cast<float>(GetTotalWorkers()) / MaxWorkerCapacity; }
 };

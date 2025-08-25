@@ -61,8 +61,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Zoom;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Select;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Cancel;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_RotateBuilding;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipRecycleTool;	
-	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipRoadTool;	
 	
 	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Look;
 	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Fire;
@@ -86,7 +86,6 @@ protected:
 	UPROPERTY() FVector2D MovementInput = FVector2D::ZeroVector;
 	UPROPERTY() bool bIsPanBeingHeld = false;
 	UPROPERTY() bool bIsMouseRotateBeingHeld = false;
-	UPROPERTY() FVector2D MousePosAtStartOfPan = FVector2D::ZeroVector;
 
 	UFUNCTION(BlueprintCallable, Category="Input")
 	void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent);
@@ -126,10 +125,10 @@ public:
 	void RTS_Select();
 	
 	void RTS_Cancel();
+
+	void RTS_RotateBuilding();
 	
 	void RTS_EquipRecycleTool();
-	
-	void RTS_EquipRoadTool();
 	
 	void ReturnToFirstPerson();
 

@@ -5,7 +5,10 @@
 
 #include "Actors/Building/BuildExclusionZone.h"
 #include "Actors/ResourceNode.h"
+#include "Actors/Building/Road.h"
+#include "Actors/Building/Structure.h"
 #include "Components/ArrowComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Pawns/RTSCamera.h"
 
 // Sets default values
@@ -14,28 +17,25 @@ ABuildable::ABuildable()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	SceneComponent = CreateDefaultSubobject<USceneComponent>("Root");
+	SetRootComponent(SceneComponent);
+
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>("Structure Mesh");
-	StaticMesh->SetupAttachment(RootComponent);
+	StaticMesh->SetupAttachment(SceneComponent);
 	StaticMesh->SetCollisionProfileName("SelectableObject");
-	StaticMesh->SetGenerateOverlapEvents(false);
+	StaticMesh->SetGenerateOverlapEvents(true);
 	
-	BuildableBounds = CreateDefaultSubobject<UBoxComponent>("Buildable Bounds");
-    BuildableBounds->SetupAttachment(StaticMesh);
-    BuildableBounds->SetBoxExtent(FVector(1000.0f, 1000.0f, 1000.0f));
-    BuildableBounds->SetRelativeLocation(FVector(0.0f, 0.0f, 1000.0f));
-    BuildableBounds->SetCollisionProfileName("Trigger");
-    BuildableBounds->SetGenerateOverlapEvents(true);
-	BuildableBounds->SetLineThickness(20.0f);
-}
+	BuildingBounds = CreateDefaultSubobject<UBoxComponent>("Building Bounds");
+    BuildingBounds->SetupAttachment(StaticMesh);
+    BuildingBounds->SetBoxExtent(FVector(1000.0f, 1000.0f, 1000.0f));
+    BuildingBounds->SetRelativeLocation(FVector(0.0f, 0.0f, 1000.0f));
+    BuildingBounds->SetCollisionProfileName("OverlapAll");
+    BuildingBounds->SetGenerateOverlapEvents(true);
+	BuildingBounds->SetLineThickness(20.0f);
 
-void ABuildable::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-
-	BuildableBounds->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
-	BuildableBounds->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
-
-	BuildableBounds->SetBoxExtent(FVector(BuildableBounds->GetUnscaledBoxExtent().X - 1, BuildableBounds->GetUnscaledBoxExtent().Y - 1, BuildableBounds->GetUnscaledBoxExtent().Z - 1));
+	ForwardIdentifierMesh = CreateDefaultSubobject<UStaticMeshComponent>("Forward Arrow");
+    ForwardIdentifierMesh->SetupAttachment(SceneComponent);
+    ForwardIdentifierMesh->SetHiddenInGame(false);
 }
 
 // Called when the game starts or when spawned
@@ -49,8 +49,19 @@ void ABuildable::BeginPlay()
 
 	if (IsBeingCreated())
 	{
-		BuildableBounds->SetHiddenInGame(false);
+		BuildingBounds->SetHiddenInGame(false);
 	}
+
+	BuildingBounds->SetBoxExtent(FVector(BuildingBounds->GetScaledBoxExtent().X - 1, BuildingBounds->GetScaledBoxExtent().Y - 1, BuildingBounds->GetScaledBoxExtent().Z - 1));
+	BuildingBounds->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
+	BuildingBounds->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
+}
+
+void ABuildable::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	ForwardIdentifierMesh->SetRelativeLocation(ForwardIdentifierMesh->GetForwardVector() * BuildingBounds->GetScaledBoxExtent().X + FVector::UpVector * BuildingBounds->GetScaledBoxExtent().Z);
 }
 
 void ABuildable::BeginDestroy()
@@ -58,47 +69,58 @@ void ABuildable::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void ABuildable::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-                                         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ABuildable::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor->IsA(ABuildExclusionZone::StaticClass()) ||
 		OtherActor->IsA(ABuildable::StaticClass()))
 	{
 		OverlappingExclusionZones.AddUnique(OtherActor);
 	}
-
+	
 	UpdateBuildMaterials();
 }
 
 void ABuildable::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+                              UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	OverlappingExclusionZones.Remove(OtherActor);
-	OverlappingResourceNodes.Remove(OtherActor);
 
 	UpdateBuildMaterials();
 }
 
-bool ABuildable::Select_Implementation(ARTSCamera* SelectInstigator)
+bool ABuildable::Recycle_Implementation(ARTSCamera* RecycleInstigator)
 {
-	BuildableSelectedDelegate.Broadcast(this);
-	
+	Recycle();
 	return true;
 }
 
-bool ABuildable::Recycle_Implementation(ARTSCamera* RecycleInstigator)
+void ABuildable::MoveBuilding(FVector NewLocation)
 {
-	BuildableRecycledDelegate.Broadcast(this);
-	Recycle();
-	return true;
+	SetActorLocation(NewLocation);
+}
+
+void ABuildable::PlaceBuilding()
+{
+	if (!IsBuildingPermitted()) return;
+	
+	ABuildable* NewStructure = GetWorld()->SpawnActor<ABuildable>(GetClass(), GetActorTransform());
+	NewStructure->BeginConstruction();
 }
 
 void ABuildable::BeginConstruction()
 {
 	ConsumeConstructionResources();
+	
+	if (ConstructionTime == 0)
+	{
+		CompleteConstruction();
+		return;
+	}
+	
 	GetWorldTimerManager().SetTimer(ConstructionTimer, this, &ABuildable::CompleteConstruction, ConstructionTime, false);
 	StructureMode = EBuildableMode::UnderConstruction;
 	UpdateBuildMaterials();
+	ForwardIdentifierMesh->SetHiddenInGame(true);
 }
 
 void ABuildable::CancelConstruction()
@@ -134,7 +156,7 @@ void ABuildable::RefundConstructionMaterials()
 void ABuildable::CompleteConstruction()
 {
 	StructureMode = EBuildableMode::Complete;
-	BuildableBounds->SetHiddenInGame(true);
+	BuildingBounds->SetHiddenInGame(true);
 	UpdateBuildMaterials();
 }
 
@@ -175,28 +197,17 @@ void ABuildable::Tick(float DeltaTime)
 
 }
 
-bool ABuildable::IsConnectedToRoad()
-{
-	return false;
-}
-
 bool ABuildable::IsBuildingPermitted()
 {
 	if (!HaveEnoughResourcesToBuild() && IsBeingCreated())
 	{
-		GEngine->AddOnScreenDebugMessage(802, 3.0f, FColor::Red, "Not enough materials to build " + GetDisplayName());
+		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "Not enough materials to build " + GetDisplayName());
 		return false;
 	}
 	
 	if (IsOverlappingBuildExclusionZone())
 	{
-		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, GetDisplayName() + " is overlapping Build Exclusion Zone.");
-		return false;
-	}
-
-	if (bRequiresConnectionToRoad && !IsConnectedToRoad())
-	{
-		GEngine->AddOnScreenDebugMessage(800, 3.0f, FColor::Red, GetDisplayName() + " needs to be connected to a road.");
+		GEngine->AddOnScreenDebugMessage(802, 3.0f, FColor::Red, GetDisplayName() + " is overlapping Build Exclusion Zone.");
 		return false;
 	}
 

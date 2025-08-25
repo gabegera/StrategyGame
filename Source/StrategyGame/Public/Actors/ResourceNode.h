@@ -24,9 +24,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* StaticMesh = nullptr;
 
-	UPROPERTY(EditDefaultsOnly)
-	USphereComponent* SphereTrigger = nullptr;
-
 	UPROPERTY() ABuildable* AssignedExtractor;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")

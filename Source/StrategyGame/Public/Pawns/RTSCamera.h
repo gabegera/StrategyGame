@@ -8,9 +8,12 @@
 #include "Controllers/RTSPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameModes/StrategyGameModeBase.h"
+#include "Interfaces/BuildingInterface.h"
 #include "RTSCamera.generated.h"
 
 class ARoad;
+class AStrategyGameModeBase;
 class AStrategyGameState;
 class APlayerCharacter;
 
@@ -19,7 +22,6 @@ enum ERTSTool
 {
 	SelectTool			UMETA(DisplayName="Select Tool"),
 	RecycleTool			UMETA(DisplayName="Destroy Tool"),
-	RoadBuildingTool	UMETA(DisplayName="Road Building Tool"),
 };
 
 UCLASS()
@@ -33,10 +35,12 @@ public:
 
 protected:
 
-	UPROPERTY() FBuildableSelectedDelegate StructureSelectedDelegate;
-
 	UPROPERTY() ARTSPlayerController* RTSPlayerController = nullptr;
 	UPROPERTY() AStrategyGameState* StrategyGameState = nullptr;
+	UPROPERTY() AStrategyGameModeBase* StrategyGameMode = nullptr;
+
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* SceneComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, Category="Components")
 	UCameraComponent* Camera = nullptr;
@@ -84,34 +88,14 @@ protected:
 
 	// ------ STRUCTURE BUILDING ------
 	
-	// The Structure that has been selected / clicked on or is being built / placed.
-	UPROPERTY() ABuildable* SelectedBuildable;
+	// The buildable that has been selected to be constructed.
+	UPROPERTY() ABuildable* BuildableBlueprint = nullptr;
 
-	UPROPERTY(EditAnywhere, Category="Structure Building")
-	int32 SnappingSize = 50;
-
-	// ------ ROAD BUILDING ------
-
-	UPROPERTY() FVector RoadStartPos = FVector::ZeroVector;
-	UPROPERTY() FVector RoadEndPos = FVector::ZeroVector;
-
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ARoad> RoadClass_1x;
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ARoad> RoadClass_2x;
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ARoad> RoadClass_5x;
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ARoad> RoadClass_10x;
+	// The Structure that has been clicked on / selected.
+	UPROPERTY() AStructure* SelectedStructure = nullptr;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	UFUNCTION()
-	virtual void OnStructureSelected(ABuildable* Selection);
-
-	UFUNCTION()
-	virtual void OnResourcesChanged();
 
 public:
 	
@@ -127,17 +111,16 @@ public:
 
 	// Interacts with the target at the mouse cursor.
 	void SelectTarget();
+
+	void DeselectTarget();
 	
 	void CancelAction();
 	
-	void BuildStructure();
+	void PlaceBlueprint();
 
-	void PlaceRoad();
+	void RotateBuilding();
 
 	void EquipRecycleTool();
-
-	UFUNCTION(BlueprintCallable)
-	void EquipRoadBuildingTool();
 	
 	UFUNCTION(BlueprintCallable)
 	void ExitRTSMode();
@@ -146,16 +129,16 @@ public:
 	FHitResult LineTraceToMousePos(ECollisionChannel CollisionChannel);
 
 	UFUNCTION(BlueprintCallable)
-	void SelectStructureBlueprint(TSubclassOf<ABuildable> NewBlueprint);
+	void SelectBuildableBlueprint(TSubclassOf<ABuildable> NewBlueprint);
 
 	UFUNCTION(BlueprintCallable)
-	void MoveStructureToMousePos();
+	void MoveBlueprintToMousePos();
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable)
-	ABuildable* SetSelectedStructure(ABuildable* NewSelectedStructure) { return SelectedBuildable = NewSelectedStructure; }
+	AStructure* SetSelectedStructure(AStructure* NewSelectedStructure) { return SelectedStructure = NewSelectedStructure; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FVector SnapVectorToGrid(FVector InputPos, int32 GridSize);
@@ -168,8 +151,17 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	AStrategyGameState* GetStrategyGameState();
 
+	UFUNCTION(BlueprintGetter)
+	AStrategyGameModeBase* GetStrategyGameMode();
+
+	UFUNCTION(BlueprintGetter)
+	int32 GetSnappingSize() { return GetStrategyGameMode()->GetSnappingSize(); }
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ABuildable* GetSelectedStructure() { return SelectedBuildable; }
+	AStructure* GetSelectedStructure() { return SelectedStructure; }
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	ABuildable* GetBuildableBlueprint() { return BuildableBlueprint; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetMinZoomHeight() { return ZoomDistanceMin; }

@@ -3,6 +3,8 @@
 
 #include "Actors/Building/Structure.h"
 
+#include "Pawns/RTSCamera.h"
+
 
 // Sets default values
 AStructure::AStructure()
@@ -15,7 +17,6 @@ AStructure::AStructure()
 void AStructure::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
@@ -38,6 +39,13 @@ void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* 
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	Super::OnOverlapEnd(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
+}
+
+bool AStructure::Select_Implementation(ARTSCamera* SelectInstigator)
+{
+	SelectInstigator->SetSelectedStructure(this);
+	
+	return Super::Select_Implementation(SelectInstigator);
 }
 
 void AStructure::ActivateStructureEffects()
@@ -94,11 +102,13 @@ void AStructure::CompleteConstruction()
 {
 	Super::CompleteConstruction();
 	ActivateStructureEffects();
+	GetStrategyGameState()->StructureBuiltDelegate.Broadcast(this);
 }
 
 void AStructure::Recycle()
 {
 	RevertStorageCapacity();
+	GetStrategyGameState()->StructureDestroyedDelegate.Broadcast(this);
 	
 	Super::Recycle();
 }
@@ -124,7 +134,7 @@ void AStructure::GenerateResources()
 	for (auto Resource : ResourcesToGeneratePerSecond)
 	{
 		EResourceType ResourceType = Resource.Key;
-		int32 ResourceAmount = Resource.Value;
+		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
 		
 		GetStrategyGameState()->AddResources(ResourceType, ResourceAmount);
 	}
@@ -140,7 +150,7 @@ void AStructure::ConsumeResources()
 	for (auto Resource : ResourcesToConsumePerSecond)
 	{
 		EResourceType ResourceType = Resource.Key;
-		int32 ResourceAmount = Resource.Value;
+		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
 		
 		GetStrategyGameState()->ConsumeResources(ResourceType, ResourceAmount);
 	}
@@ -155,11 +165,13 @@ void AStructure::DrainResourceFromNode()
 {
 	if (TargetResourceNode)
 	{
-		int32 ResourceCapacity = GetStrategyGameState()->GetResourceCapacity(TargetResourceNode->GetResourceType());
-		int32 ResourceAmount = GetStrategyGameState()->GetResourceAmount(TargetResourceNode->GetResourceType());
-		if (ResourceCapacity >= ResourceAmount + ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType()))
+		int32 ResourceStorageCapacity = GetStrategyGameState()->GetResourceCapacity(TargetResourceNode->GetResourceType());
+		float ResourceStorageAmount = GetStrategyGameState()->GetResourceAmount(TargetResourceNode->GetResourceType());
+		if (ResourceStorageCapacity >= ResourceStorageAmount + ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType()))
 		{
-			TargetResourceNode->DrainResource(ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType()));
+			float AmountToDrain = ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType());
+			AmountToDrain *= GetWorkerEfficiency();
+			TargetResourceNode->DrainResource(AmountToDrain);
 		}
 		else
 		{
@@ -180,6 +192,64 @@ void AStructure::DrainResourceFromNode()
 			GEngine->AddOnScreenDebugMessage(951, 3.0f, FColor::Red, GetDisplayName() + ": No Nearby Ore Nodes.");
 		}
 	}
+}
+
+void AStructure::AssignWorkers(EWorkerType WorkerType, int32 Amount)
+{
+	if (Amount <= 0) return;
+	
+	if (IsWorkerCapacityFull())
+	{
+		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + ": Worker Capacity is full.");
+		return;
+	}
+	
+	if (bRequiresScientists && WorkerType != EWorkerType::Scientist)
+	{
+		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + " Requires Scientists");
+		return;
+	}
+
+	if (GetStrategyGameState()->GetUnemployedPopulation(WorkerType) >= Amount)
+	{
+		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + Amount);
+	}
+	else
+	{
+		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + GetStrategyGameState()->GetUnemployedPopulation(WorkerType));
+	}
+}
+
+void AStructure::AddMaxWorkers(EWorkerType WorkerType)
+{
+	if (GetAvailableWorkersSlots() < GetStrategyGameState()->GetPopulation(WorkerType))
+	{
+		AssignWorkers(WorkerType, GetStrategyGameState()->GetPopulation(WorkerType));
+	}
+	else
+	{
+		AssignWorkers(WorkerType, GetAvailableWorkersSlots());
+	}
+}
+
+void AStructure::RemoveWorkers(EWorkerType WorkerType, int32 Amount)
+{
+	if (Amount <= 0) return;
+	
+	if (GetWorkerCount(WorkerType) >= Amount)
+	{
+		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) - Amount);
+	}
+	else
+	{
+		AssignedWorkers.Add(WorkerType, 0);
+	}
+}
+
+void AStructure::RemoveAllWorkers()
+{
+	RemoveWorkers(EWorkerType::Worker, GetWorkerCount(EWorkerType::Worker));
+	RemoveWorkers(EWorkerType::Scientist, GetWorkerCount(EWorkerType::Scientist));
 }
 
 void AStructure::UpdateBuildMaterials()

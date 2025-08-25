@@ -6,19 +6,30 @@
 #include "GameFramework/GameStateBase.h"
 #include "StrategyGameState.generated.h"
 
+class AStructure;
+class ARoad;
 
-UENUM(BlueprintType)
+UENUM(BlueprintType, DisplayName="Resource Type")
 enum class EResourceType : uint8
 {
 	Metal				UMETA(DisplayName="Metal"),
 	AlienMaterial		UMETA(DisplayName="Alien Material"),
 	Food				UMETA(DisplayName="Food"),
 	Power				UMETA(DisplayName="Power"),
-	Workers				UMETA(DisplayName="Workers"),
-	Scientists			UMETA(DisplayName="Scientists"),
+};
+
+UENUM(BlueprintType, DisplayName="Worker Type")
+enum class EWorkerType : uint8
+{
+	Worker			UMETA(DisplayName="Worker"),
+	Scientist		UMETA(DisplayName="Scientist"),
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FResourcesChangedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPopulationChangedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAssignedWorkersChangedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureBuiltDelegate, AStructure*, BuiltStructure);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureDestroyedDelegate, AStructure*, DestroyedStructure);
 
 UCLASS()
 class STRATEGYGAME_API AStrategyGameState : public AGameStateBase
@@ -28,37 +39,110 @@ class STRATEGYGAME_API AStrategyGameState : public AGameStateBase
 	AStrategyGameState();
 
 protected:
+
+	UPROPERTY() TArray<AStructure*> BuiltStructures;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
-	TMap<EResourceType, int32> ResourceInventory;
+	TMap<EResourceType, float> ResourceInventory;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	TMap<EResourceType, int32> MaximumResources;
 
+	UPROPERTY(EditDefaultsOnly, Category="Population")
+	TMap<EWorkerType, int32> Population;
+
+	UPROPERTY(EditDefaultsOnly, Category="Population")
+	int32 PopulationCapacity = 0;
+
 	virtual void BeginPlay() override;
+
+	UFUNCTION() void OnStructureBuilt(AStructure* BuiltStructure);
+	UFUNCTION() void OnStructureDestroyed(AStructure* BuiltStructure);
 
 public:
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FResourcesChangedDelegate ResourcesChangedDelegate;
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FResourcesChangedDelegate PopulationChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FAssignedWorkersChangedDelegate AssignedWorkersChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FStructureBuiltDelegate StructureBuiltDelegate;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FStructureBuiltDelegate StructureDestroyedDelegate;
+
+	// Ensures that resources are between 0 and their maximum capacity.
+	void ClampResources();
+
+	// Finds all the structures that have been placed and returns an array.
+	TArray<AStructure*> FindAllStructures();
+
+	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources")
-	int32 GetResourceAmount(EResourceType ResourceType) { return ResourceInventory.FindRef(ResourceType); }
+	float GetResourceAmount(EResourceType ResourceType) { return ResourceInventory.FindRef(ResourceType); }
+
+	// Gets the resource amount floored to an int32. Useful for UI and displaying resource counts.
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources")
+	int32 GetResourceAmountInt32(EResourceType ResourceType) { return FMath::FloorToInt32(GetResourceAmount(ResourceType)); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources")
 	int32 GetResourceCapacity(EResourceType ResourceType) { return MaximumResources.FindRef(ResourceType); }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetPopulation(EWorkerType WorkerType) { return Population.FindRef(WorkerType); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetTotalPopulation() { return GetPopulation(EWorkerType::Worker) + GetPopulation(EWorkerType::Scientist); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetPopulationCapacity() { return PopulationCapacity; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetEmployedPopulation(EWorkerType WorkerType);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetUnemployedPopulation(EWorkerType WorkerType) { return GetPopulation(WorkerType) - GetEmployedPopulation(WorkerType); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetTotalEmployedPopulation();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetTotalUnemployedPopulation() { return GetTotalPopulation() - GetTotalEmployedPopulation(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
+	int32 GetHomelessPopulation();
+
+	// ------ SETTERS ------
+
 	// Attempts to add resources to the ResourceInventory Map. Returns if it was successful.
 	UFUNCTION(BlueprintCallable, Category="Resources")
-	bool AddResources(EResourceType ResourceType, int32 Amount);
+	float AddResources(EResourceType ResourceType, float Amount);
 
 	// Attempts to remove resources from the ResourceInventory Map. Returns if it was successful.
 	UFUNCTION(BlueprintCallable, Category="Resources")
-	bool ConsumeResources(EResourceType ResourceType, int32 Amount);
+	float ConsumeResources(EResourceType ResourceType, float Amount);
 
 	UFUNCTION(BlueprintCallable, Category="Resources")
-	void IncreaseResourceStorage(EResourceType ResourceType, int32 IncreaseAmount);
+	int32 IncreaseResourceStorage(EResourceType ResourceType, int32 IncreaseAmount);
 	
 	UFUNCTION(BlueprintCallable, Category="Resources")
-	void DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount);
+	int32 DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount);
+
+	UFUNCTION(BlueprintCallable, Category="Population")
+	int32 IncreasePopulation(EWorkerType WorkerType, int32 IncreaseAmount);
+
+	UFUNCTION(BlueprintCallable, Category="Population")
+	int32 DecreasePopulation(EWorkerType WorkerType, int32 DecreaseAmount);
+
+	UFUNCTION(BlueprintCallable, Category="Population")
+	int32 IncreasePopulationCapacity(int32 IncreaseAmount);
+
+	UFUNCTION(BlueprintCallable, Category="Population")
+	int32 DecreasePopulationCapacity(int32 DecreaseAmount);
 };

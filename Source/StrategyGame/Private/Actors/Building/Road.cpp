@@ -7,8 +7,11 @@
 // Sets default values
 ARoad::ARoad()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	DisplayName = "Road";
+
+	SplineMesh = CreateDefaultSubobject<USplineMeshComponent>("Road Spline Mesh");
+	SplineMesh->SetupAttachment(SceneComponent);
+	SplineMesh->SetHiddenInGame(true);
 
 	bRequiresConnectionToRoad = false;
 }
@@ -17,19 +20,38 @@ ARoad::ARoad()
 void ARoad::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
-bool ARoad::Recycle_Implementation(ARTSCamera* DestroyInstigator)
+void ARoad::MoveBuilding(FVector NewLocation)
 {
-	for (ARoad* Road : ConnectedRoads)
+	if (RoadStartPos != FVector::ZeroVector)
 	{
-		Road->Recycle();
+		RoadEndPos = NewLocation;
+		
+		SplineMesh->SetStartPosition(RoadStartPos);
+		SplineMesh->SetEndPosition(RoadEndPos);
 	}
+	else
+	{
+		SetActorLocation(NewLocation);
+	}
+}
 
-	Recycle();
-
-	return true;
+void ARoad::PlaceBuilding()
+{
+	if (RoadStartPos == FVector::ZeroVector)
+	{
+		RoadStartPos = GetActorLocation();
+		StaticMesh->SetHiddenInGame(true);
+		SplineMesh->SetHiddenInGame(false);
+	}
+	else if (RoadEndPos != FVector::ZeroVector)
+	{
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.Template = this;
+		ARoad* NewRoad = GetWorld()->SpawnActor<ARoad>(GetClass(), GetActorTransform(), SpawnParameters);
+		NewRoad->BeginConstruction();
+	}
 }
 
 void ARoad::UpdateBuildMaterials()
@@ -41,5 +63,10 @@ void ARoad::UpdateBuildMaterials()
 void ARoad::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (IsBeingCreated() && RoadStartPos != FVector::ZeroVector)
+	{
+		RoadEndPos = GetActorLocation();
+	}
 }
 
