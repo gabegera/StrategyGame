@@ -88,7 +88,7 @@ void ARTSCamera::UpdateZoom()
 
 void ARTSCamera::SelectTarget()
 {
-	FHitResult Hit = LineTraceToMousePos(ECC_Visibility);
+	FHitResult Hit = LineTraceToMousePos(ECC_GameTraceChannel2);
 
 	if (BuildableBlueprint && BuildableBlueprint->IsBeingCreated())
 	{
