@@ -11,7 +11,7 @@ ARemoteControlTurret::ARemoteControlTurret()
 
 void ARemoteControlTurret::Look(FVector2D Input)
 {
-	FRotator NewRotation = FRotator(GetActorRotation().Pitch, GetActorRotation().Yaw + Input.X, FMath::Clamp(GetActorRotation().Roll + Input.Y, -90.0f, 90.0f));
+	FRotator NewRotation = FRotator(FMath::Clamp(GetActorRotation().Pitch + Input.Y, -90.0f, 90.0f), GetActorRotation().Yaw + Input.X, GetActorRotation().Roll);
 	SetActorRotation(NewRotation);
 }
 

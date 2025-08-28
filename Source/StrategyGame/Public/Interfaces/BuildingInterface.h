@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "BuildingInterface.generated.h"
 
+class APowerLine;
 class ARTSCamera;
 
 // This class does not need to be modified.
@@ -22,13 +23,13 @@ class STRATEGYGAME_API IBuildingInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	bool GetIsConstructionComplete();
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	bool Select(ARTSCamera* SelectInstigator);
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	bool Recycle(ARTSCamera* DestroyInstigator);
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	bool Move(ARTSCamera* DestroyInstigator);
 };

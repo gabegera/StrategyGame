@@ -15,9 +15,9 @@ class UArrowComponent;
 UENUM(BlueprintType)
 enum class EBuildableMode : uint8
 {
-	BeingCreated		UMETA(DisplayName="Being Created"),
-	UnderConstruction	UMETA(DisplayName="Under Construction"),
-	Complete			UMETA(DisplayName="Complete"),
+	BeingCreated			UMETA(DisplayName="Being Created"),
+	UnderConstruction		UMETA(DisplayName="Under Construction"),
+	ConstructionComplete	UMETA(DisplayName="Construction Complete"),
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructurePlacedDelegate, ABuildable*, NewBuildable);
@@ -75,6 +75,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Construction")
 	float ConstructionTime = 3.0f;
 
+	// The Offset to add to the snapping grid.
+	UPROPERTY(EditDefaultsOnly, Category="Construction")
+	int32 SnappingOffset = 0;
+
 	UPROPERTY(EditDefaultsOnly, Category="Construction|Materials")
 	UMaterialInstance* CanBuildMaterial;
 
@@ -98,15 +102,14 @@ protected:
 
 	virtual void BeginDestroy() override;
 
-	UFUNCTION()
-	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION() virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION() virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 public:
 
 	// ------ INTERFACE FUNCTIONS ------
-	
+
+	virtual bool GetIsConstructionComplete_Implementation() override;
 	virtual bool Recycle_Implementation(ARTSCamera* RecycleInstigator) override;
 
 	UFUNCTION(BlueprintCallable)
@@ -150,13 +153,16 @@ public:
 	EBuildableMode GetStructureMode() { return StructureMode; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int32 GetSnappingOffset() { return SnappingOffset; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsBeingCreated() { return StructureMode == EBuildableMode::BeingCreated; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsUnderConstruction() { return StructureMode == EBuildableMode::UnderConstruction; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsCompleted() { return StructureMode == EBuildableMode::Complete; }
+	bool IsConstructionComplete() { return StructureMode == EBuildableMode::ConstructionComplete; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsOverlappingBuildExclusionZone() { return !OverlappingExclusionZones.IsEmpty(); }

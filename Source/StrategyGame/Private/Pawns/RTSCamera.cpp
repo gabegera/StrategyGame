@@ -200,6 +200,7 @@ void ARTSCamera::MoveBlueprintToMousePos()
 	FHitResult Hit = LineTraceToMousePos(ECC_GameTraceChannel1);
 	
 	FVector NewLocation = SnapVectorToGrid(Hit.ImpactPoint, GetSnappingSize());
+	NewLocation += FVector(BuildableBlueprint->GetSnappingOffset(), BuildableBlueprint->GetSnappingOffset(), 0.0f);
 
 	BuildableBlueprint->MoveBuilding(NewLocation);
 }
@@ -208,6 +209,11 @@ void ARTSCamera::MoveBlueprintToMousePos()
 void ARTSCamera::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// Empty spaces to move the debug messages below the in-game UI.
+	GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::White, " ");
+	GEngine->AddOnScreenDebugMessage(1, 1.0f, FColor::White, " ");
+	GEngine->AddOnScreenDebugMessage(2, 1.0f, FColor::White, " ");
 
 	if (BuildableBlueprint && BuildableBlueprint->IsBeingCreated())
 	{

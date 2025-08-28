@@ -52,7 +52,7 @@ void ABuildable::BeginPlay()
 		BuildingBounds->SetHiddenInGame(false);
 	}
 
-	BuildingBounds->SetBoxExtent(FVector(BuildingBounds->GetScaledBoxExtent().X - 1, BuildingBounds->GetScaledBoxExtent().Y - 1, BuildingBounds->GetScaledBoxExtent().Z - 1));
+	BuildingBounds->SetBoxExtent(FVector(BuildingBounds->GetScaledBoxExtent().X - 5, BuildingBounds->GetScaledBoxExtent().Y - 5, BuildingBounds->GetScaledBoxExtent().Z - 5));
 	BuildingBounds->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
 	BuildingBounds->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 }
@@ -60,6 +60,8 @@ void ABuildable::BeginPlay()
 void ABuildable::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+
+	BuildingBounds->SetRelativeLocation(FVector(0.0f, 0.0f, BuildingBounds->GetScaledBoxExtent().Z));
 
 	ForwardIdentifierMesh->SetRelativeLocation(ForwardIdentifierMesh->GetForwardVector() * BuildingBounds->GetScaledBoxExtent().X + FVector::UpVector * BuildingBounds->GetScaledBoxExtent().Z);
 }
@@ -86,6 +88,11 @@ void ABuildable::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* 
 	OverlappingExclusionZones.Remove(OtherActor);
 
 	UpdateBuildMaterials();
+}
+
+bool ABuildable::GetIsConstructionComplete_Implementation()
+{
+	return IsConstructionComplete();
 }
 
 bool ABuildable::Recycle_Implementation(ARTSCamera* RecycleInstigator)
@@ -155,7 +162,7 @@ void ABuildable::RefundConstructionMaterials()
 
 void ABuildable::CompleteConstruction()
 {
-	StructureMode = EBuildableMode::Complete;
+	StructureMode = EBuildableMode::ConstructionComplete;
 	BuildingBounds->SetHiddenInGame(true);
 	UpdateBuildMaterials();
 }
@@ -174,7 +181,7 @@ void ABuildable::UpdateBuildMaterials()
 		if (StaticMesh->GetMaterial(0) != IsBuildingMaterial) StaticMesh->SetMaterial(0, IsBuildingMaterial);
 		return;
 	}
-	if (IsCompleted())
+	if (IsConstructionComplete())
 	{
 		if (StaticMesh->GetMaterial(0) != StructureMaterial) StaticMesh->SetMaterial(0, StructureMaterial);
 		return;

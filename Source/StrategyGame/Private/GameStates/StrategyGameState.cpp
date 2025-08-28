@@ -9,18 +9,22 @@
 
 AStrategyGameState::AStrategyGameState()
 {
-	ResourceInventory.Add(EResourceType::Metal, 60);
+	ResourceInventory.Add(EResourceType::Metal, 40);
+	ResourceInventory.Add(EResourceType::Concrete, 60);
+	ResourceInventory.Add(EResourceType::Oil, 20);
 	ResourceInventory.Add(EResourceType::AlienMaterial, 0);
 	ResourceInventory.Add(EResourceType::Food, 20);
 	ResourceInventory.Add(EResourceType::Power, 0);
 
 	MaximumResources.Add(EResourceType::Metal, 100);
+	MaximumResources.Add(EResourceType::Concrete, 100);
+	MaximumResources.Add(EResourceType::Oil, 100);
 	MaximumResources.Add(EResourceType::AlienMaterial, 20);
 	MaximumResources.Add(EResourceType::Food, 100);
 	MaximumResources.Add(EResourceType::Power, 200);
 
-	Population.Add(EWorkerType::Worker, 100);
-	Population.Add(EWorkerType::Scientist, 20);
+	Population.Add(ECitizenType::Worker, 100);
+	Population.Add(ECitizenType::Scientist, 20);
 
 	StructureBuiltDelegate.AddUniqueDynamic(this, &ThisClass::OnStructureBuilt);
 	StructureDestroyedDelegate.AddUniqueDynamic(this, &ThisClass::OnStructureDestroyed);
@@ -78,7 +82,7 @@ TArray<AStructure*> AStrategyGameState::FindAllStructures()
 	return OutArray;
 }
 
-int32 AStrategyGameState::GetEmployedPopulation(EWorkerType WorkerType)
+int32 AStrategyGameState::GetEmployedPopulation(ECitizenType WorkerType)
 {
 	int32 EmployedWorkers = 0;
 	for (auto Structure : BuiltStructures)
@@ -117,6 +121,12 @@ float AStrategyGameState::AddResources(EResourceType ResourceType, float Amount)
 		case EResourceType::Metal:
 			GEngine->AddOnScreenDebugMessage(900, 3.0f, FColor::Red, "METAL storage is full.");
 			break;
+		case EResourceType::Concrete:
+			GEngine->AddOnScreenDebugMessage(900, 3.0f, FColor::Red, "CONCRETE storage is full.");
+			break;
+		case EResourceType::Oil:
+			GEngine->AddOnScreenDebugMessage(900, 3.0f, FColor::Red, "OIL storage is full.");
+			break;
 		case EResourceType::AlienMaterial:
 			GEngine->AddOnScreenDebugMessage(901, 3.0f, FColor::Red, "ALIEN MATERIAL storage is full.");
 			break;
@@ -147,6 +157,12 @@ float AStrategyGameState::ConsumeResources(EResourceType ResourceType, float Amo
 		{
 		case EResourceType::Metal:
 			GEngine->AddOnScreenDebugMessage(906, 3.0f, FColor::Red, "Attempted to remove more METAL than was available.");
+			break;
+		case EResourceType::Concrete:
+			GEngine->AddOnScreenDebugMessage(906, 3.0f, FColor::Red, "Attempted to remove more CONCRETE than was available.");
+			break;
+		case EResourceType::Oil:
+			GEngine->AddOnScreenDebugMessage(906, 3.0f, FColor::Red, "Attempted to remove more OIL than was available.");
 			break;
 		case EResourceType::AlienMaterial:
 			GEngine->AddOnScreenDebugMessage(907, 3.0f, FColor::Red, "Attempted to remove more ALIEN MATERIAL than was available.");
@@ -185,7 +201,7 @@ int32 AStrategyGameState::DecreaseResourceStorage(EResourceType ResourceType, in
 	return GetResourceCapacity(ResourceType);
 }
 
-int32 AStrategyGameState::IncreasePopulation(EWorkerType WorkerType, int32 IncreaseAmount)
+int32 AStrategyGameState::IncreasePopulation(ECitizenType WorkerType, int32 IncreaseAmount)
 {
 	Population.Add(WorkerType, GetPopulation(WorkerType) + IncreaseAmount);
 
@@ -193,7 +209,7 @@ int32 AStrategyGameState::IncreasePopulation(EWorkerType WorkerType, int32 Incre
 	return GetPopulation(WorkerType);
 }
 
-int32 AStrategyGameState::DecreasePopulation(EWorkerType WorkerType, int32 DecreaseAmount)
+int32 AStrategyGameState::DecreasePopulation(ECitizenType WorkerType, int32 DecreaseAmount)
 {
 	Population.Add(WorkerType, GetPopulation(WorkerType) - DecreaseAmount);
 

@@ -13,13 +13,15 @@ UENUM(BlueprintType, DisplayName="Resource Type")
 enum class EResourceType : uint8
 {
 	Metal				UMETA(DisplayName="Metal"),
+	Concrete			UMETA(DisplayName="Concrete"),
+	Oil					UMETA(DisplayName="Oil"),
 	AlienMaterial		UMETA(DisplayName="Alien Material"),
 	Food				UMETA(DisplayName="Food"),
 	Power				UMETA(DisplayName="Power"),
 };
 
-UENUM(BlueprintType, DisplayName="Worker Type")
-enum class EWorkerType : uint8
+UENUM(BlueprintType, DisplayName="Citizen Type")
+enum class ECitizenType : uint8
 {
 	Worker			UMETA(DisplayName="Worker"),
 	Scientist		UMETA(DisplayName="Scientist"),
@@ -49,7 +51,7 @@ protected:
 	TMap<EResourceType, int32> MaximumResources;
 
 	UPROPERTY(EditDefaultsOnly, Category="Population")
-	TMap<EWorkerType, int32> Population;
+	TMap<ECitizenType, int32> Population;
 
 	UPROPERTY(EditDefaultsOnly, Category="Population")
 	int32 PopulationCapacity = 0;
@@ -95,19 +97,19 @@ public:
 	int32 GetResourceCapacity(EResourceType ResourceType) { return MaximumResources.FindRef(ResourceType); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	int32 GetPopulation(EWorkerType WorkerType) { return Population.FindRef(WorkerType); }
+	int32 GetPopulation(ECitizenType WorkerType) { return Population.FindRef(WorkerType); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	int32 GetTotalPopulation() { return GetPopulation(EWorkerType::Worker) + GetPopulation(EWorkerType::Scientist); }
+	int32 GetTotalPopulation() { return GetPopulation(ECitizenType::Worker) + GetPopulation(ECitizenType::Scientist); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
 	int32 GetPopulationCapacity() { return PopulationCapacity; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	int32 GetEmployedPopulation(EWorkerType WorkerType);
+	int32 GetEmployedPopulation(ECitizenType WorkerType);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	int32 GetUnemployedPopulation(EWorkerType WorkerType) { return GetPopulation(WorkerType) - GetEmployedPopulation(WorkerType); }
+	int32 GetUnemployedPopulation(ECitizenType WorkerType) { return GetPopulation(WorkerType) - GetEmployedPopulation(WorkerType); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
 	int32 GetTotalEmployedPopulation();
@@ -135,10 +137,10 @@ public:
 	int32 DecreaseResourceStorage(EResourceType ResourceType, int32 DecreaseAmount);
 
 	UFUNCTION(BlueprintCallable, Category="Population")
-	int32 IncreasePopulation(EWorkerType WorkerType, int32 IncreaseAmount);
+	int32 IncreasePopulation(ECitizenType WorkerType, int32 IncreaseAmount);
 
 	UFUNCTION(BlueprintCallable, Category="Population")
-	int32 DecreasePopulation(EWorkerType WorkerType, int32 DecreaseAmount);
+	int32 DecreasePopulation(ECitizenType WorkerType, int32 DecreaseAmount);
 
 	UFUNCTION(BlueprintCallable, Category="Population")
 	int32 IncreasePopulationCapacity(int32 IncreaseAmount);

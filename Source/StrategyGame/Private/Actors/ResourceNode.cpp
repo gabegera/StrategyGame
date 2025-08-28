@@ -10,10 +10,18 @@ AResourceNode::AResourceNode()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	SceneComponent = CreateDefaultSubobject<USceneComponent>("Root");
+	SetRootComponent(SceneComponent);
+
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>("Static Mesh");
-	StaticMesh->SetupAttachment(RootComponent);
+	StaticMesh->SetupAttachment(SceneComponent);
 	StaticMesh->SetCollisionProfileName("SelectableObject");
 	StaticMesh->SetGenerateOverlapEvents(true);
+
+	Sphere = CreateDefaultSubobject<USphereComponent>("Trigger");
+	Sphere->SetupAttachment(StaticMesh);
+	Sphere->SetCollisionProfileName("Trigger");
+	Sphere->SetSphereRadius(2000.0f);
 }
 
 // Called when the game starts or when spawned

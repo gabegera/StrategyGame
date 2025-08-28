@@ -3,6 +3,9 @@
 
 #include "Actors/Building/Structure.h"
 
+#include "Actors/Building/PowerLine.h"
+#include "GameFramework/GameSession.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Pawns/RTSCamera.h"
 
 
@@ -13,6 +16,13 @@ AStructure::AStructure()
 	PrimaryActorTick.bCanEverTick = true;
 
 	StaticMesh->SetCollisionProfileName("Selectable");
+
+	StructureText = CreateDefaultSubobject<UTextRenderComponent>("Structure Text");
+	StructureText->SetupAttachment(StaticMesh);
+	StructureText->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+	StructureText->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
+	StructureText->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	StructureText->SetWorldSize(256.0f);
 }
 
 // Called when the game starts or when spawned
@@ -21,8 +31,15 @@ void AStructure::BeginPlay()
 	Super::BeginPlay();
 }
 
-void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void AStructure::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	StructureText->SetText(FText::FromString(DisplayName));
+	StructureText->SetRelativeLocation(FVector(0.0f, 0.0f, BuildingBounds->GetScaledBoxExtent().Z * 2 + 50.0f));
+}
+
+void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor->IsA(AResourceNode::StaticClass()) &&
 		bConsumesResourceFromNearbyNode)
@@ -37,17 +54,33 @@ void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	Super::OnOverlapBegin(OverlappedComp, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
 }
 
-void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	Super::OnOverlapEnd(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
+	OverlappingResourceNodes.Remove(OtherActor);
 }
 
 bool AStructure::Select_Implementation(ARTSCamera* SelectInstigator)
 {
 	SelectInstigator->SetSelectedStructure(this);
 	
-	return Super::Select_Implementation(SelectInstigator);
+	return true;
+}
+
+bool AStructure::ConnectPower_Implementation(APowerLine* PowerLine)
+{
+	ConnectedPowerLines.AddUnique(PowerLine);
+	PowerLine->SetPowerFeeder(this);
+	
+	return true;
+}
+
+bool AStructure::DisconnectPower_Implementation(APowerLine* PowerLine)
+{
+	ConnectedPowerLines.Remove(PowerLine);
+	PowerLine->ClearPowerFeeder();
+	
+	return true;
 }
 
 void AStructure::ActivateStructureEffects()
@@ -64,6 +97,10 @@ void AStructure::ActivateStructureEffects()
 
 			GetStrategyGameState()->IncreaseResourceStorage(ResourceType, Amount);
 		}
+	}
+	if (DoesIncreasePopulationCapacity())
+	{
+		GetStrategyGameState()->IncreasePopulationCapacity(AdditionalPopulationCapacity);
 	}
 }
 
@@ -196,7 +233,7 @@ void AStructure::DrainResourceFromNode()
 	}
 }
 
-void AStructure::AssignWorkers(EWorkerType WorkerType, int32 Amount)
+void AStructure::AssignWorkers(ECitizenType WorkerType, int32 Amount)
 {
 	if (Amount <= 0) return;
 	
@@ -206,9 +243,14 @@ void AStructure::AssignWorkers(EWorkerType WorkerType, int32 Amount)
 		return;
 	}
 	
-	if (bRequiresScientists && WorkerType != EWorkerType::Scientist)
+	if (!bAllowScientistEmployment && WorkerType == ECitizenType::Scientist)
 	{
-		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + " Requires Scientists");
+		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + "Scientists aren't permitted to work here.");
+		return;
+	}
+	if (!bAllowWorkerEmployment && WorkerType == ECitizenType::Worker)
+	{
+		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + "Workers aren't permitted to work here.");
 		return;
 	}
 
@@ -222,19 +264,12 @@ void AStructure::AssignWorkers(EWorkerType WorkerType, int32 Amount)
 	}
 }
 
-void AStructure::AddMaxWorkers(EWorkerType WorkerType)
+void AStructure::AddMaxWorkers(ECitizenType WorkerType)
 {
-	if (GetAvailableWorkersSlots() < GetStrategyGameState()->GetPopulation(WorkerType))
-	{
-		AssignWorkers(WorkerType, GetStrategyGameState()->GetPopulation(WorkerType));
-	}
-	else
-	{
-		AssignWorkers(WorkerType, GetAvailableWorkersSlots());
-	}
+	AssignWorkers(WorkerType, GetAvailableWorkersSlots());
 }
 
-void AStructure::RemoveWorkers(EWorkerType WorkerType, int32 Amount)
+void AStructure::RemoveWorkers(ECitizenType WorkerType, int32 Amount)
 {
 	if (Amount <= 0) return;
 	
@@ -248,10 +283,16 @@ void AStructure::RemoveWorkers(EWorkerType WorkerType, int32 Amount)
 	}
 }
 
-void AStructure::RemoveAllWorkers()
+void AStructure::RemoveAllWorkers(ECitizenType WorkerType)
 {
-	RemoveWorkers(EWorkerType::Worker, GetWorkerCount(EWorkerType::Worker));
-	RemoveWorkers(EWorkerType::Scientist, GetWorkerCount(EWorkerType::Scientist));
+	switch (WorkerType) {
+	case ECitizenType::Worker:
+		RemoveWorkers(ECitizenType::Worker, GetWorkerCount(ECitizenType::Worker));
+		break;
+	case ECitizenType::Scientist:
+		RemoveWorkers(ECitizenType::Scientist, GetWorkerCount(ECitizenType::Scientist));
+		break;
+	}
 }
 
 void AStructure::UpdateBuildMaterials()
@@ -263,6 +304,10 @@ void AStructure::UpdateBuildMaterials()
 void AStructure::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	FVector CameraLocation = GEngine->GetFirstLocalPlayerController(GetWorld())->PlayerCameraManager->GetCameraLocation();
+	FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(StructureText->GetComponentLocation(), CameraLocation);
+	StructureText->SetWorldRotation(LookAtRotation);
 }
 
 bool AStructure::IsBuildingPermitted()

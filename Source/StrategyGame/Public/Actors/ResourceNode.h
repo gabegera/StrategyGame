@@ -21,8 +21,13 @@ public:
 
 protected:
 
+	UPROPERTY() USceneComponent* SceneComponent;
+
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* StaticMesh = nullptr;
+
+	UPROPERTY(EditDefaultsOnly)
+	USphereComponent* Sphere;
 
 	UPROPERTY() ABuildable* AssignedExtractor;
 

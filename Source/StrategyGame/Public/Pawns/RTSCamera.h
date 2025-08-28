@@ -126,7 +126,7 @@ public:
 	void ExitRTSMode();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FHitResult LineTraceToMousePos(ECollisionChannel CollisionChannel);
+	FHitResult LineTraceToMousePos(ECollisionChannel CollisionChannel = ECC_Visibility);
 
 	UFUNCTION(BlueprintCallable)
 	void SelectBuildableBlueprint(TSubclassOf<ABuildable> NewBlueprint);
