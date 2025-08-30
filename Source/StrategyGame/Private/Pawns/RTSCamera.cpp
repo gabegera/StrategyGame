@@ -200,7 +200,7 @@ void ARTSCamera::MoveBlueprintToMousePos()
 	FHitResult Hit = LineTraceToMousePos(ECC_GameTraceChannel1);
 	
 	FVector NewLocation = SnapVectorToGrid(Hit.ImpactPoint, GetSnappingSize());
-	NewLocation += FVector(BuildableBlueprint->GetSnappingOffset(), BuildableBlueprint->GetSnappingOffset(), 0.0f);
+	NewLocation += FVector(BuildableBlueprint->GetSnappingOffset().X, BuildableBlueprint->GetSnappingOffset().Y, 0.0f);
 
 	BuildableBlueprint->MoveBuilding(NewLocation);
 }

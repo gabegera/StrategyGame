@@ -42,10 +42,10 @@ void AStructure::OnConstruction(const FTransform& Transform)
 void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor->IsA(AResourceNode::StaticClass()) &&
-		bConsumesResourceFromNearbyNode)
+		GetConsumesResourcesFromNearbyNode())
 	{
 		AResourceNode* Resource = Cast<AResourceNode>(OtherActor);
-		if (ResourcesToConsumePerSecond.Contains(Resource->GetResourceType()))
+		if (GetResourcesToConsumePerSecond().Contains(Resource->GetResourceType()))
 		{
 			OverlappingResourceNodes.Add(Resource);
 		}
@@ -67,30 +67,14 @@ bool AStructure::Select_Implementation(ARTSCamera* SelectInstigator)
 	return true;
 }
 
-bool AStructure::ConnectPower_Implementation(APowerLine* PowerLine)
-{
-	ConnectedPowerLines.AddUnique(PowerLine);
-	PowerLine->SetPowerFeeder(this);
-	
-	return true;
-}
-
-bool AStructure::DisconnectPower_Implementation(APowerLine* PowerLine)
-{
-	ConnectedPowerLines.Remove(PowerLine);
-	PowerLine->ClearPowerFeeder();
-	
-	return true;
-}
-
 void AStructure::ActivateStructureEffects()
 {
-	if (bGeneratesResources) BeginGeneratingResources();
-	if (bConsumesResources && !bConsumesResourceFromNearbyNode) BeginConsumingResources();
-	if (bConsumesResources && bConsumesResourceFromNearbyNode) BeginDrainingResourceFromNode();
-	if (bIncreasesStorageCapacity)
+	if (GetGeneratesResources()) BeginGeneratingResources();
+	if (GetConsumesResources() && !GetConsumesResourcesFromNearbyNode()) BeginConsumingResources();
+	if (GetConsumesResources() && GetConsumesResourcesFromNearbyNode()) BeginDrainingResourceFromNode();
+	if (GetIncreasesStorageCapacity())
 	{
-		for (auto Resource : ResourcesToIncreaseStorage)
+		for (auto Resource : GetResourcesToIncreaseStorage())
 		{
 			EResourceType ResourceType = Resource.Key;
 			int32 Amount = Resource.Value;
@@ -98,9 +82,10 @@ void AStructure::ActivateStructureEffects()
 			GetStrategyGameState()->IncreaseResourceStorage(ResourceType, Amount);
 		}
 	}
+
 	if (DoesIncreasePopulationCapacity())
 	{
-		GetStrategyGameState()->IncreasePopulationCapacity(AdditionalPopulationCapacity);
+		GetStrategyGameState()->IncreasePopulationCapacity(GetAdditionalPopulationCapacity());
 	}
 }
 
@@ -130,7 +115,7 @@ void AStructure::BeginConstruction()
 {
 	Super::BeginConstruction();
 
-	if (bConsumesResourceFromNearbyNode)
+	if (GetConsumesResourcesFromNearbyNode())
 	{
 		TargetResourceNode = FindClosestResourceNode();
 		if (TargetResourceNode) TargetResourceNode->SetAssignedExtractor(this);
@@ -154,7 +139,7 @@ void AStructure::Recycle()
 
 void AStructure::RevertStorageCapacity()
 {
-	for (auto Resource : ResourcesToIncreaseStorage)
+	for (auto Resource : GetResourcesToIncreaseStorage())
 	{
 		EResourceType ResourceType = Resource.Key;
 		int32 ResourceAmount = Resource.Value;
@@ -170,7 +155,7 @@ void AStructure::BeginGeneratingResources()
 
 void AStructure::GenerateResources()
 {
-	for (auto Resource : ResourcesToGeneratePerSecond)
+	for (auto Resource : GetResourcesToGeneratePerSecond())
 	{
 		EResourceType ResourceType = Resource.Key;
 		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
@@ -186,7 +171,7 @@ void AStructure::BeginConsumingResources()
 
 void AStructure::ConsumeResources()
 {
-	for (auto Resource : ResourcesToConsumePerSecond)
+	for (auto Resource : GetResourcesToConsumePerSecond())
 	{
 		EResourceType ResourceType = Resource.Key;
 		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
@@ -206,9 +191,9 @@ void AStructure::DrainResourceFromNode()
 	{
 		int32 ResourceStorageCapacity = GetStrategyGameState()->GetResourceCapacity(TargetResourceNode->GetResourceType());
 		float ResourceStorageAmount = GetStrategyGameState()->GetResourceAmount(TargetResourceNode->GetResourceType());
-		if (ResourceStorageCapacity >= ResourceStorageAmount + ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType()))
+		if (ResourceStorageCapacity >= ResourceStorageAmount + GetResourcesToConsumePerSecond().FindRef(TargetResourceNode->GetResourceType()))
 		{
-			float AmountToDrain = ResourcesToConsumePerSecond.FindRef(TargetResourceNode->GetResourceType());
+			float AmountToDrain = GetResourcesToConsumePerSecond().FindRef(TargetResourceNode->GetResourceType());
 			AmountToDrain *= GetWorkerEfficiency();
 			TargetResourceNode->DrainResource(AmountToDrain);
 		}
@@ -243,12 +228,12 @@ void AStructure::AssignWorkers(ECitizenType WorkerType, int32 Amount)
 		return;
 	}
 	
-	if (!bAllowScientistEmployment && WorkerType == ECitizenType::Scientist)
+	if (!GetAllowScientistEmployment() && WorkerType == ECitizenType::Scientist)
 	{
 		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + "Scientists aren't permitted to work here.");
 		return;
 	}
-	if (!bAllowWorkerEmployment && WorkerType == ECitizenType::Worker)
+	if (!GetAllowWorkerEmployment() && WorkerType == ECitizenType::Worker)
 	{
 		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + "Workers aren't permitted to work here.");
 		return;
@@ -312,17 +297,26 @@ void AStructure::Tick(float DeltaTime)
 
 bool AStructure::IsBuildingPermitted()
 {
-	if (bConsumesResourceFromNearbyNode && !IsOverlappingResourceNode())
+	if (GetConsumesResourcesFromNearbyNode() && !IsOverlappingResourceNode())
 	{
 		GEngine->AddOnScreenDebugMessage(800, 3.0f, FColor::Red, GetDisplayName() + " needs to be near the correct resource.");
 		return false;
 	}
-	if (IsOverlappingResourceNode() && ConsumesResourcesFromNearbyNode() && FindClosestResourceNode()->GetAssignedExtractor())
+	if (IsOverlappingResourceNode() && GetConsumesResourcesFromNearbyNode() && FindClosestResourceNode()->GetAssignedExtractor())
 	{
 		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "The Resource node already has an assigned extractor.");
 		return false;
 	}	
 	
 	return Super::IsBuildingPermitted();
+}
+
+const FStructureData* AStructure::GetStructureData()
+{
+	FStructureData* Data = StructureDataTableRow.GetRow<FStructureData>("");
+
+	verifyf(Data, TEXT("AStructure::GetStructureData failed to get FStructureData pointer."))
+
+	return Data;
 }
 

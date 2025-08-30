@@ -23,6 +23,8 @@ enum class EBuildableMode : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructurePlacedDelegate, ABuildable*, NewBuildable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableRecycledDelegate, ABuildable*, NewBuildable);
 
+
+// The base class for any actor that can be built in RTS Mode.
 UCLASS()
 class STRATEGYGAME_API ABuildable : public ACustomActor, public IBuildingInterface
 {
@@ -51,8 +53,8 @@ protected:
 
 	// ------ STRUCTURE INFO ------
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Structure Info")
-	FString DisplayName = "Unnamed Structure";
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Buildable")
+	FString DisplayName = "Unnamed Buildable";
 
 	// ------ VARIABLES & REFERENCES ------
 	UPROPERTY() EBuildableMode StructureMode = EBuildableMode::BeingCreated;
@@ -65,33 +67,27 @@ protected:
 
 	FTimerHandle ConstructionTimer;
 
-	UPROPERTY() UMaterialInterface* StructureMaterial;
-
-	// If true the buildable needs to be connected to a road in order to be built.
-	UPROPERTY(EditDefaultsOnly, Category="Construction")
-	bool bRequiresConnectionToRoad = true;
-
 	// How long it takes for the structure to be built.
-	UPROPERTY(EditDefaultsOnly, Category="Construction")
+	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction")
 	float ConstructionTime = 3.0f;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction")
+	TMap<EResourceType, int32> ConstructionCost;
 
 	// The Offset to add to the snapping grid.
-	UPROPERTY(EditDefaultsOnly, Category="Construction")
-	int32 SnappingOffset = 0;
+	UPROPERTY() FIntVector2 SnappingOffset = FIntVector2(0, 0);
 
-	UPROPERTY(EditDefaultsOnly, Category="Construction|Materials")
+	UPROPERTY() UMaterialInterface* StructureMaterial;	
+
+	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction|Materials")
 	UMaterialInstance* CanBuildMaterial;
 
-	UPROPERTY(EditDefaultsOnly, Category="Construction|Materials")
+	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction|Materials")
 	UMaterialInstance* CanNotBuildMaterial;
 
-	UPROPERTY(EditDefaultsOnly, Category="Construction|Materials")
+	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction|Materials")
 	UMaterialInstance* IsBuildingMaterial;
-
-	// ------ RESOURCES ------
-
-	UPROPERTY(EditDefaultsOnly, Category="Construction")
-	TMap<EResourceType, int32> ConstructionCost;
+	
 
 	// ------ PROTECTED FUNCTIONS ------
 	
@@ -153,7 +149,7 @@ public:
 	EBuildableMode GetStructureMode() { return StructureMode; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	int32 GetSnappingOffset() { return SnappingOffset; }
+	FIntVector2 GetSnappingOffset() { return SnappingOffset; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsBeingCreated() { return StructureMode == EBuildableMode::BeingCreated; }

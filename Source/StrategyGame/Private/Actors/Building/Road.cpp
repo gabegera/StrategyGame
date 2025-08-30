@@ -12,8 +12,6 @@ ARoad::ARoad()
 	SplineMesh = CreateDefaultSubobject<USplineMeshComponent>("Road Spline Mesh");
 	SplineMesh->SetupAttachment(SceneComponent);
 	SplineMesh->SetHiddenInGame(true);
-
-	bRequiresConnectionToRoad = false;
 }
 
 // Called when the game starts or when spawned

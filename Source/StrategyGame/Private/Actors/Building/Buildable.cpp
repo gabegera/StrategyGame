@@ -27,8 +27,6 @@ ABuildable::ABuildable()
 	
 	BuildingBounds = CreateDefaultSubobject<UBoxComponent>("Building Bounds");
     BuildingBounds->SetupAttachment(StaticMesh);
-    BuildingBounds->SetBoxExtent(FVector(1000.0f, 1000.0f, 1000.0f));
-    BuildingBounds->SetRelativeLocation(FVector(0.0f, 0.0f, 1000.0f));
     BuildingBounds->SetCollisionProfileName("OverlapAll");
     BuildingBounds->SetGenerateOverlapEvents(true);
 	BuildingBounds->SetLineThickness(20.0f);
@@ -36,6 +34,13 @@ ABuildable::ABuildable()
 	ForwardIdentifierMesh = CreateDefaultSubobject<UStaticMeshComponent>("Forward Arrow");
     ForwardIdentifierMesh->SetupAttachment(SceneComponent);
     ForwardIdentifierMesh->SetHiddenInGame(false);
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> CanBuildMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_CanBuild.MI_CanBuild"));
+	if (CanBuildMaterialFinder.Succeeded()) CanBuildMaterial = CanBuildMaterialFinder.Object;
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> CanNotBuildMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_CannotBuild.MI_CannotBuild"));
+	if (CanBuildMaterialFinder.Succeeded()) CanNotBuildMaterial = CanNotBuildMaterialFinder.Object;
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> IsBuildingMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_IsBuilding.MI_IsBuilding"));
+	if (CanBuildMaterialFinder.Succeeded()) IsBuildingMaterial = IsBuildingMaterialFinder.Object;
 }
 
 // Called when the game starts or when spawned
@@ -61,7 +66,31 @@ void ABuildable::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
+	// Attempts to search for the set snapping grid size and resizes the building bounds based upon it and the static mesh size.
+	FVector StaticMeshBounds = FVector::ZeroVector;
+	if (StaticMesh->GetStaticMesh()) StaticMeshBounds = StaticMesh->GetStaticMesh()->GetBounds().BoxExtent;
+	
+	int32 HalfSnappingSize = 200;
+	FString GameModePath = TEXT("/Game/Blueprints/GameModes/BP_StrategyGameModeBase.BP_StrategyGameModeBase_C");
+	if (const TSubclassOf<AStrategyGameModeBase> GameModeClass = StaticLoadClass(AStrategyGameModeBase::StaticClass(), nullptr, *GameModePath))
+	{
+		HalfSnappingSize = GameModeClass.GetDefaultObject()->GetSnappingSize() / 2;
+	}
+
+	if (StaticMeshBounds == FVector::ZeroVector) StaticMeshBounds = FVector(HalfSnappingSize, HalfSnappingSize, HalfSnappingSize);
+	FVector SnappedBounds = FVector(FMath::CeilToInt32(StaticMeshBounds.X / HalfSnappingSize) * HalfSnappingSize, FMath::CeilToInt32(StaticMeshBounds.Y / HalfSnappingSize) * HalfSnappingSize, StaticMeshBounds.Z + 100);
+	BuildingBounds->SetBoxExtent(SnappedBounds);
 	BuildingBounds->SetRelativeLocation(FVector(0.0f, 0.0f, BuildingBounds->GetScaledBoxExtent().Z));
+
+	// If the bounds of the buildable are an odd number of grids, then add a snapping offset to line up with the snapping grid properly.
+	if (static_cast<int32>(BuildingBounds->GetUnscaledBoxExtent().X) / HalfSnappingSize % 2 !=0)
+	{
+		SnappingOffset.X = HalfSnappingSize;
+	}
+	if (static_cast<int32>(BuildingBounds->GetUnscaledBoxExtent().Y) / HalfSnappingSize % 2 !=0)
+	{
+		SnappingOffset.Y = HalfSnappingSize;
+	}
 
 	ForwardIdentifierMesh->SetRelativeLocation(ForwardIdentifierMesh->GetForwardVector() * BuildingBounds->GetScaledBoxExtent().X + FVector::UpVector * BuildingBounds->GetScaledBoxExtent().Z);
 }
@@ -82,8 +111,7 @@ void ABuildable::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	UpdateBuildMaterials();
 }
 
-void ABuildable::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                              UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void ABuildable::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	OverlappingExclusionZones.Remove(OtherActor);
 
@@ -176,23 +204,31 @@ void ABuildable::Recycle()
 
 void ABuildable::UpdateBuildMaterials()
 {
+	ensureMsgf(CanBuildMaterial, TEXT("ABuildable::UpdateBuildMaterials CanBuildMaterial is not set in %s"), GetDebugName(this));
+	ensureMsgf(CanNotBuildMaterial, TEXT("ABuildable::UpdateBuildMaterials CanNotBuild is not set in %s"), GetDebugName(this));
+	ensureMsgf(IsBuildingMaterial, TEXT("ABuildable::UpdateBuildMaterials IsBuilding is not set in %s"), GetDebugName(this));
+	
 	if (IsUnderConstruction())
 	{
+		if (!CanBuildMaterial) return;
 		if (StaticMesh->GetMaterial(0) != IsBuildingMaterial) StaticMesh->SetMaterial(0, IsBuildingMaterial);
 		return;
 	}
 	if (IsConstructionComplete())
 	{
+		if (!StructureMaterial) return;
 		if (StaticMesh->GetMaterial(0) != StructureMaterial) StaticMesh->SetMaterial(0, StructureMaterial);
 		return;
 	}
 
 	if (IsBuildingPermitted())
 	{
+		if (!CanBuildMaterial) return;
 		if (StaticMesh->GetMaterial(0) != CanBuildMaterial) StaticMesh->SetMaterial(0, CanBuildMaterial);
 	}
 	else
 	{
+		if (!CanNotBuildMaterial) return;
 		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
 	}
 }

@@ -43,3 +43,13 @@ AStrategyGameState* ACustomActor::GetStrategyGameState()
 	return StrategyGameState;
 }
 
+AStrategyGameModeBase* ACustomActor::GetStrategyGameMode()
+{
+	if (StrategyGameMode == nullptr)
+	{
+		StrategyGameMode = Cast<AStrategyGameModeBase>(GetWorld()->GetGameState());
+	}
+
+	return StrategyGameMode;
+}
+

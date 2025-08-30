@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "Buildable.h"
 #include "Components/TextRenderComponent.h"
+#include "DataTables/StructureData.h"
 #include "Interfaces/PowerInterface.h"
 #include "Structure.generated.h"
 
+// Child of ABuildable that has the ability to change resource and population values.
 UCLASS()
 class STRATEGYGAME_API AStructure : public ABuildable, public IPowerInterface
 {
@@ -26,49 +28,12 @@ protected:
 	UPROPERTY() FTimerHandle ResourceConsumptionTimer;
 	UPROPERTY() FTimerHandle ResourceDrainingTimer;
 
-	// ------ STRUCTURE EFFECTS ------
+	// ------ STRUCTURE DATA ------
 
-	// How much this structure increases population capacity;
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects", meta=(ClampMin=0))
-	int32 AdditionalPopulationCapacity = 0;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects")
-	bool bGeneratesResources = false;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Generation", meta=(EditCondition="bGeneratesResources", EditConditionHides))
-	TMap<EResourceType, float> ResourcesToGeneratePerSecond;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects")
-	bool bConsumesResources = false;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Consumption", meta=(EditCondition="bConsumesResources", EditConditionHides))
-	bool bConsumesResourceFromNearbyNode = false;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Consumption", meta=(EditCondition="bConsumesResources", EditConditionHides))
-	TMap<EResourceType, float> ResourcesToConsumePerSecond;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects")
-	bool bIncreasesStorageCapacity = false;
-
-	UPROPERTY(EditDefaultsOnly, Category="Structure Effects|Resource Storage", meta=(EditCondition="bIncreasesStorageCapacity", EditConditionHides))
-	TMap<EResourceType, int32> ResourcesToIncreaseStorage;
-
-	// ------ POWER ------
-
-	UPROPERTY() TArray<APowerLine*> ConnectedPowerLines;
-
-	// ------ WORKERS ------
-
-	UPROPERTY(EditAnywhere, Category="Workers")
-	bool bAllowWorkerEmployment = false;
-	
-	UPROPERTY(EditAnywhere, Category="Workers")
-	bool bAllowScientistEmployment = false;
+	UPROPERTY(EditDefaultsOnly, Category="Structure Data")
+	FDataTableRowHandle StructureDataTableRow;
 	
 	UPROPERTY() TMap<ECitizenType, int32> AssignedWorkers;
-
-	UPROPERTY(EditAnywhere, Category="Workers", meta=(EditCondition="bAllowWorkerEmployment || bAllowScientistEmployment"))
-	int32 MaxWorkerCapacity = 15;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -83,9 +48,6 @@ public:
 	// ------ INTERFACE FUNCTIONS ------
 	
 	virtual bool Select_Implementation(ARTSCamera* SelectInstigator) override;
-	
-	virtual bool ConnectPower_Implementation(APowerLine* PowerLine) override;
-	virtual bool DisconnectPower_Implementation(APowerLine* PowerLine) override;
 
 	UFUNCTION(BlueprintCallable)
 	void ActivateStructureEffects();
@@ -132,42 +94,55 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool ConsumesResourcesFromNearbyNode() { return bConsumesResourceFromNearbyNode; }
-
-	virtual bool IsBuildingPermitted() override;
-	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsBuildingPermitted")
-	bool BP_IsBuildingPermitted() { return IsBuildingPermitted(); }
 	
-
 	// ------ GETTERS ------
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Power")
-	bool DoesRequiresPowerConnection() { return ResourcesToConsumePerSecond.Contains(EResourceType::Power) && ResourcesToConsumePerSecond.FindRef(EResourceType::Power) > 0; }
+	virtual bool IsBuildingPermitted() override;
+    UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsBuildingPermitted")
+    bool BP_IsBuildingPermitted() { return IsBuildingPermitted(); }
+	
+	const FStructureData* GetStructureData();
+	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="GetStructureData")
+	FStructureData BP_GetStructureData() { return *GetStructureData();}
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Power")
-	bool DoesGeneratePower() { return ResourcesToGeneratePerSecond.Contains(EResourceType::Power) && ResourcesToGeneratePerSecond.FindRef(EResourceType::Power) > 0; }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetGeneratesResources() { return GetStructureData()->bGeneratesResources; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Power")
-	bool IsConnectedToPowerLines() { return !ConnectedPowerLines.IsEmpty(); }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetConsumesResources() { return GetStructureData()->bConsumesResources; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetConsumesResourcesFromNearbyNode() { return GetStructureData()->bConsumesResourceFromNearbyNode; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetIncreasesStorageCapacity() { return GetStructureData()->bIncreasesStorageCapacity; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TMap<EResourceType, float> GetResourcesToGeneratePerSecond() { return GetStructureData()->ResourcesToGeneratePerSecond; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TMap<EResourceType, float> GetResourcesToConsumePerSecond() { return GetStructureData()->ResourcesToConsumePerSecond; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TMap<EResourceType, int32> GetResourcesToIncreaseStorage() { return GetStructureData()->ResourcesToIncreaseStorage; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	bool DoesIncreasePopulationCapacity() { return AdditionalPopulationCapacity > 0; }
+	bool DoesIncreasePopulationCapacity() { return GetStructureData()->AdditionalPopulationCapacity > 0; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	int32 GetAdditionalPopulationCapacity() { return AdditionalPopulationCapacity; }
+	int32 GetAdditionalPopulationCapacity() { return GetStructureData()->AdditionalPopulationCapacity; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	bool GetAllowWorkerEmployment() { return bAllowWorkerEmployment; }
+	bool GetAllowWorkerEmployment() { return GetStructureData()->bAllowWorkerEmployment; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	bool GetAllowScientistEmployment() { return bAllowScientistEmployment; }
+	bool GetAllowScientistEmployment() { return GetStructureData()->bAllowScientistEmployment; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
 	int32 GetWorkerCount(ECitizenType WorkerType) { return AssignedWorkers.FindRef(WorkerType); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	int32 GetMaxWorkerCapacity() { return MaxWorkerCapacity; }
+	int32 GetMaxWorkerCapacity() { return GetStructureData()->MaxWorkerCapacity; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
 	int32 GetTotalWorkers() { return GetWorkerCount(ECitizenType::Worker) + GetWorkerCount(ECitizenType::Scientist); }
@@ -180,5 +155,5 @@ public:
 
 	// Returns a value between 0 and 1 based on how many workers are assigned to the structure.
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	float GetWorkerEfficiency() { if (!bAllowWorkerEmployment && !bAllowScientistEmployment) return 1; return static_cast<float>(GetTotalWorkers()) / MaxWorkerCapacity; }
+	float GetWorkerEfficiency() { if (!GetAllowWorkerEmployment() && !GetAllowScientistEmployment()) return 1; return static_cast<float>(GetTotalWorkers()) / GetMaxWorkerCapacity(); }
 };
