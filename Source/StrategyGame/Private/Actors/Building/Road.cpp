@@ -40,7 +40,7 @@ void ARoad::PlaceBuilding()
 	if (RoadStartPos == FVector::ZeroVector)
 	{
 		RoadStartPos = GetActorLocation();
-		StaticMesh->SetHiddenInGame(true);
+		StaticMeshComponent->SetHiddenInGame(true);
 		SplineMesh->SetHiddenInGame(false);
 	}
 	else if (RoadEndPos != FVector::ZeroVector)

@@ -15,6 +15,7 @@ AStrategyGameState::AStrategyGameState()
 	ResourceInventory.Add(EResourceType::AlienMaterial, 0);
 	ResourceInventory.Add(EResourceType::Food, 20);
 	ResourceInventory.Add(EResourceType::Power, 0);
+	ResourceInventory.Add(EResourceType::ResearchPoints, 0);
 
 	MaximumResources.Add(EResourceType::Metal, 100);
 	MaximumResources.Add(EResourceType::Concrete, 100);
@@ -22,6 +23,7 @@ AStrategyGameState::AStrategyGameState()
 	MaximumResources.Add(EResourceType::AlienMaterial, 20);
 	MaximumResources.Add(EResourceType::Food, 100);
 	MaximumResources.Add(EResourceType::Power, 200);
+	MaximumResources.Add(EResourceType::ResearchPoints, 10);
 
 	Population.Add(ECitizenType::Worker, 100);
 	Population.Add(ECitizenType::Scientist, 20);
@@ -136,6 +138,9 @@ float AStrategyGameState::AddResources(EResourceType ResourceType, float Amount)
 		case EResourceType::Power:
 			GEngine->AddOnScreenDebugMessage(903, 3.0f, FColor::Red, "POWER capacity is full.");
 			break;
+		case EResourceType::ResearchPoints:
+			GEngine->AddOnScreenDebugMessage(904, 3.0f, FColor::Red, "RESEARCH POINTS capacity is full.");
+			break;
 		}
 		return GetResourceAmount(ResourceType);
 	}
@@ -172,6 +177,9 @@ float AStrategyGameState::ConsumeResources(EResourceType ResourceType, float Amo
 			break;
 		case EResourceType::Power:
 			GEngine->AddOnScreenDebugMessage(909, 3.0f, FColor::Red, "Attempted to remove more POWER than was available.");
+			break;
+		case EResourceType::ResearchPoints:
+			GEngine->AddOnScreenDebugMessage(909, 3.0f, FColor::Red, "Attempted to remove more RESEARCH POINTS than was available.");
 			break;
 		}
 		return GetResourceAmount(ResourceType);

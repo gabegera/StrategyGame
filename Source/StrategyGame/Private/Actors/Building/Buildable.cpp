@@ -20,13 +20,13 @@ ABuildable::ABuildable()
 	SceneComponent = CreateDefaultSubobject<USceneComponent>("Root");
 	SetRootComponent(SceneComponent);
 
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>("Structure Mesh");
-	StaticMesh->SetupAttachment(SceneComponent);
-	StaticMesh->SetCollisionProfileName("SelectableObject");
-	StaticMesh->SetGenerateOverlapEvents(true);
+	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("Structure Mesh");
+	StaticMeshComponent->SetupAttachment(SceneComponent);
+	StaticMeshComponent->SetCollisionProfileName("SelectableObject");
+	StaticMeshComponent->SetGenerateOverlapEvents(true);
 	
 	BuildingBounds = CreateDefaultSubobject<UBoxComponent>("Building Bounds");
-    BuildingBounds->SetupAttachment(StaticMesh);
+    BuildingBounds->SetupAttachment(StaticMeshComponent);
     BuildingBounds->SetCollisionProfileName("OverlapAll");
     BuildingBounds->SetGenerateOverlapEvents(true);
 	BuildingBounds->SetLineThickness(20.0f);
@@ -34,6 +34,8 @@ ABuildable::ABuildable()
 	ForwardIdentifierMesh = CreateDefaultSubobject<UStaticMeshComponent>("Forward Arrow");
     ForwardIdentifierMesh->SetupAttachment(SceneComponent);
     ForwardIdentifierMesh->SetHiddenInGame(false);
+
+	BuildableStateChangedDelegate.AddUniqueDynamic(this, &ThisClass::OnBuildableStateChanged);
 
 	static ConstructorHelpers::FObjectFinder<UMaterialInstance> CanBuildMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_CanBuild.MI_CanBuild"));
 	if (CanBuildMaterialFinder.Succeeded()) CanBuildMaterial = CanBuildMaterialFinder.Object;
@@ -48,7 +50,7 @@ void ABuildable::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StructureMaterial = StaticMesh->GetMaterial(0);
+	StructureMaterial = StaticMeshComponent->GetMaterial(0);
 
 	UpdateBuildMaterials();
 
@@ -59,7 +61,7 @@ void ABuildable::BeginPlay()
 
 	BuildingBounds->SetBoxExtent(FVector(BuildingBounds->GetScaledBoxExtent().X - 5, BuildingBounds->GetScaledBoxExtent().Y - 5, BuildingBounds->GetScaledBoxExtent().Z - 5));
 	BuildingBounds->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnOverlapBegin);
-	BuildingBounds->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
+	BuildingBounds->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);	
 }
 
 void ABuildable::OnConstruction(const FTransform& Transform)
@@ -68,7 +70,7 @@ void ABuildable::OnConstruction(const FTransform& Transform)
 
 	// Attempts to search for the set snapping grid size and resizes the building bounds based upon it and the static mesh size.
 	FVector StaticMeshBounds = FVector::ZeroVector;
-	if (StaticMesh->GetStaticMesh()) StaticMeshBounds = StaticMesh->GetStaticMesh()->GetBounds().BoxExtent;
+	if (StaticMeshComponent->GetStaticMesh()) StaticMeshBounds = StaticMeshComponent->GetStaticMesh()->GetBounds().BoxExtent;
 	
 	int32 HalfSnappingSize = 200;
 	FString GameModePath = TEXT("/Game/Blueprints/GameModes/BP_StrategyGameModeBase.BP_StrategyGameModeBase_C");
@@ -118,6 +120,24 @@ void ABuildable::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* 
 	UpdateBuildMaterials();
 }
 
+void ABuildable::OnBuildableStateChanged(ABuildable* Buildable, EBuildableState NewBuildableState)
+{
+	BP_OnBuildableStateChanged(Buildable, NewBuildableState);
+
+	switch (NewBuildableState)
+	{
+	case EBuildableState::BeingCreated:
+		BuildingBounds->SetHiddenInGame(false);
+		break;
+	case EBuildableState::UnderConstruction:
+		BuildingBounds->SetHiddenInGame(false);
+		break;
+	case EBuildableState::ConstructionComplete:
+		BuildingBounds->SetHiddenInGame(true);
+		break;
+	}
+}
+
 bool ABuildable::GetIsConstructionComplete_Implementation()
 {
 	return IsConstructionComplete();
@@ -153,7 +173,7 @@ void ABuildable::BeginConstruction()
 	}
 	
 	GetWorldTimerManager().SetTimer(ConstructionTimer, this, &ABuildable::CompleteConstruction, ConstructionTime, false);
-	StructureMode = EBuildableMode::UnderConstruction;
+	SetBuildableState(EBuildableState::UnderConstruction);
 	UpdateBuildMaterials();
 	ForwardIdentifierMesh->SetHiddenInGame(true);
 }
@@ -190,8 +210,7 @@ void ABuildable::RefundConstructionMaterials()
 
 void ABuildable::CompleteConstruction()
 {
-	StructureMode = EBuildableMode::ConstructionComplete;
-	BuildingBounds->SetHiddenInGame(true);
+	SetBuildableState(EBuildableState::ConstructionComplete);
 	UpdateBuildMaterials();
 }
 
@@ -204,32 +223,32 @@ void ABuildable::Recycle()
 
 void ABuildable::UpdateBuildMaterials()
 {
-	ensureMsgf(CanBuildMaterial, TEXT("ABuildable::UpdateBuildMaterials CanBuildMaterial is not set in %s"), GetDebugName(this));
-	ensureMsgf(CanNotBuildMaterial, TEXT("ABuildable::UpdateBuildMaterials CanNotBuild is not set in %s"), GetDebugName(this));
-	ensureMsgf(IsBuildingMaterial, TEXT("ABuildable::UpdateBuildMaterials IsBuilding is not set in %s"), GetDebugName(this));
+	ensureMsgf(CanBuildMaterial, TEXT("ABuildable::UpdateBuildMaterials CanBuildMaterial is not set"));
+	ensureMsgf(CanNotBuildMaterial, TEXT("ABuildable::UpdateBuildMaterials CanNotBuild is not set"));
+	ensureMsgf(IsBuildingMaterial, TEXT("ABuildable::UpdateBuildMaterials IsBuilding is not set"));
 	
 	if (IsUnderConstruction())
 	{
 		if (!CanBuildMaterial) return;
-		if (StaticMesh->GetMaterial(0) != IsBuildingMaterial) StaticMesh->SetMaterial(0, IsBuildingMaterial);
+		if (StaticMeshComponent->GetMaterial(0) != IsBuildingMaterial) StaticMeshComponent->SetMaterial(0, IsBuildingMaterial);
 		return;
 	}
 	if (IsConstructionComplete())
 	{
 		if (!StructureMaterial) return;
-		if (StaticMesh->GetMaterial(0) != StructureMaterial) StaticMesh->SetMaterial(0, StructureMaterial);
+		if (StaticMeshComponent->GetMaterial(0) != StructureMaterial) StaticMeshComponent->SetMaterial(0, StructureMaterial);
 		return;
 	}
 
 	if (IsBuildingPermitted())
 	{
 		if (!CanBuildMaterial) return;
-		if (StaticMesh->GetMaterial(0) != CanBuildMaterial) StaticMesh->SetMaterial(0, CanBuildMaterial);
+		if (StaticMeshComponent->GetMaterial(0) != CanBuildMaterial) StaticMeshComponent->SetMaterial(0, CanBuildMaterial);
 	}
 	else
 	{
 		if (!CanNotBuildMaterial) return;
-		if (StaticMesh->GetMaterial(0) != CanNotBuildMaterial) StaticMesh->SetMaterial(0, CanNotBuildMaterial);
+		if (StaticMeshComponent->GetMaterial(0) != CanNotBuildMaterial) StaticMeshComponent->SetMaterial(0, CanNotBuildMaterial);
 	}
 }
 

@@ -12,12 +12,13 @@ class ARoad;
 UENUM(BlueprintType, DisplayName="Resource Type")
 enum class EResourceType : uint8
 {
-	Metal				UMETA(DisplayName="Metal"),
-	Concrete			UMETA(DisplayName="Concrete"),
-	Oil					UMETA(DisplayName="Oil"),
-	AlienMaterial		UMETA(DisplayName="Alien Material"),
-	Food				UMETA(DisplayName="Food"),
-	Power				UMETA(DisplayName="Power"),
+	Metal						UMETA(DisplayName="Metal"),
+	Concrete					UMETA(DisplayName="Concrete"),
+	Oil							UMETA(DisplayName="Oil"),
+	AlienMaterial				UMETA(DisplayName="Alien Material"),
+	Food						UMETA(DisplayName="Food"),
+	Power						UMETA(DisplayName="Power"),
+	ResearchPoints				UMETA(DisplayName="Research Points"),
 };
 
 UENUM(BlueprintType, DisplayName="Citizen Type")

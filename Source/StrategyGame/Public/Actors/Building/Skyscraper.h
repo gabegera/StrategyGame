@@ -3,7 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Buildable.h"
+#include "SkyscraperModule.h"
+#include "Structure.h"
 #include "Skyscraper.generated.h"
 
 
@@ -18,10 +19,40 @@ public:
 	ASkyscraper();
 
 protected:
+	
+	UPROPERTY(EditAnywhere, Category="Skyscraper|Modules")
+	TSubclassOf<ASkyscraperModule> ModuleClass;
+
+	UPROPERTY(EditAnywhere, Category="Skyscraper|Modules", meta=(ClampMin=1, ClampMax=5))
+	int32 MaxSkyscraperSections = 3;
+	
+	UPROPERTY(VisibleAnywhere, Category="Skyscraper|Modules")
+	TArray<ASkyscraperModule*> Modules;
+	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void CompleteConstruction() override;
+
+	UFUNCTION(BlueprintCallable, Category="Skyscraper")
+	void BuildModules();
+
+	virtual void OnConstruction(const FTransform& Transform) override;
+
 public:
+
+	UFUNCTION(BlueprintCallable, Category="Skyscraper")
+	void AddModule(TSubclassOf<ASkyscraperModule> ModuleToAdd);
+
+	virtual void Recycle() override;
+
+	virtual bool Select_Implementation(ARTSCamera* SelectInstigator) override;
+	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	// ------ GETTERS ------
+
+	
 };
+

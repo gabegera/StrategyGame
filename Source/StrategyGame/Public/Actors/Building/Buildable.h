@@ -13,13 +13,15 @@
 class UArrowComponent;
 
 UENUM(BlueprintType)
-enum class EBuildableMode : uint8
+enum class EBuildableState : uint8
 {
 	BeingCreated			UMETA(DisplayName="Being Created"),
 	UnderConstruction		UMETA(DisplayName="Under Construction"),
 	ConstructionComplete	UMETA(DisplayName="Construction Complete"),
 };
 
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBuildableStateChangedDelegate, ABuildable*, NewBuildable, EBuildableState, NewMode);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructurePlacedDelegate, ABuildable*, NewBuildable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableRecycledDelegate, ABuildable*, NewBuildable);
 
@@ -41,8 +43,8 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* SceneComponent;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
-	UStaticMeshComponent* StaticMesh = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintGetter=GetStaticMeshComponent, Category="Components")
+	UStaticMeshComponent* StaticMeshComponent = nullptr;
 
 	// A Mesh to show during building construction which direction is forward.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
@@ -53,11 +55,15 @@ protected:
 
 	// ------ STRUCTURE INFO ------
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Buildable")
+	UPROPERTY(EditDefaultsOnly, BlueprintGetter=GetDisplayName, Category="Buildable")
 	FString DisplayName = "Unnamed Buildable";
 
 	// ------ VARIABLES & REFERENCES ------
-	UPROPERTY() EBuildableMode StructureMode = EBuildableMode::BeingCreated;
+
+	// Use the setter function if changing this variable, that way the delegate gets broadcast.
+	UPROPERTY(BlueprintGetter=GetBuildableState)
+	EBuildableState BuildableState = EBuildableState::ConstructionComplete;
+	
 	UPROPERTY() TArray<AActor*> OverlappingExclusionZones;
 	UPROPERTY() TArray<AActor*> OverlappingResourceNodes;
 	UPROPERTY() TArray<AActor*> OverlappingRoads;
@@ -75,7 +81,8 @@ protected:
 	TMap<EResourceType, int32> ConstructionCost;
 
 	// The Offset to add to the snapping grid.
-	UPROPERTY() FIntVector2 SnappingOffset = FIntVector2(0, 0);
+	UPROPERTY(BlueprintGetter=GetSnappingOffset)
+	FIntVector2 SnappingOffset = FIntVector2(0, 0);
 
 	UPROPERTY() UMaterialInterface* StructureMaterial;	
 
@@ -102,6 +109,13 @@ protected:
 	UFUNCTION() virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 public:
+	
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FBuildableStateChangedDelegate BuildableStateChangedDelegate;
+
+	UFUNCTION() void OnBuildableStateChanged(ABuildable* Buildable, EBuildableState NewBuildableState);
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnBuildableStateChanged")
+	void BP_OnBuildableStateChanged(ABuildable* Buildable, EBuildableState NewBuildableState);
 
 	// ------ INTERFACE FUNCTIONS ------
 
@@ -139,26 +153,29 @@ public:
 
 	// ------ GETTERS ------
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintGetter)
 	FString GetDisplayName() { return DisplayName; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UStaticMeshComponent* GetStaticMesh() { return StaticMesh; }
+	UFUNCTION(BlueprintGetter)
+	UStaticMeshComponent* GetStaticMeshComponent() { return StaticMeshComponent; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	EBuildableMode GetStructureMode() { return StructureMode; }
+	UFUNCTION(BlueprintGetter)
+	EBuildableState GetBuildableState() { return BuildableState; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintCallable)
+	EBuildableState SetBuildableState(EBuildableState NewMode) { BuildableStateChangedDelegate.Broadcast(this, NewMode); return BuildableState = NewMode;}
+
+	UFUNCTION(BlueprintGetter)
 	FIntVector2 GetSnappingOffset() { return SnappingOffset; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsBeingCreated() { return StructureMode == EBuildableMode::BeingCreated; }
+	bool IsBeingCreated() { return BuildableState == EBuildableState::BeingCreated; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsUnderConstruction() { return StructureMode == EBuildableMode::UnderConstruction; }
+	bool IsUnderConstruction() { return BuildableState == EBuildableState::UnderConstruction; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsConstructionComplete() { return StructureMode == EBuildableMode::ConstructionComplete; }
+	bool IsConstructionComplete() { return BuildableState == EBuildableState::ConstructionComplete; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsOverlappingBuildExclusionZone() { return !OverlappingExclusionZones.IsEmpty(); }

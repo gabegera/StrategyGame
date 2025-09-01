@@ -15,10 +15,10 @@ AStructure::AStructure()
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	StaticMesh->SetCollisionProfileName("Selectable");
+	StaticMeshComponent->SetCollisionProfileName("Selectable");
 
 	StructureText = CreateDefaultSubobject<UTextRenderComponent>("Structure Text");
-	StructureText->SetupAttachment(StaticMesh);
+	StructureText->SetupAttachment(StaticMeshComponent);
 	StructureText->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 	StructureText->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
 	StructureText->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
@@ -62,7 +62,7 @@ void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* 
 
 bool AStructure::Select_Implementation(ARTSCamera* SelectInstigator)
 {
-	SelectInstigator->SetSelectedStructure(this);
+	SelectInstigator->SetSelectedBuildable(this);
 	
 	return true;
 }

@@ -118,7 +118,7 @@ void ARTSCamera::SelectTarget()
 
 void ARTSCamera::DeselectTarget()
 {
-	SelectedStructure = nullptr;
+	SelectedBuildable = nullptr;
 }
 
 void ARTSCamera::CancelAction()
@@ -191,6 +191,7 @@ void ARTSCamera::SelectBuildableBlueprint(TSubclassOf<ABuildable> NewBlueprint)
 {
 	CancelAction();
 	BuildableBlueprint = GetWorld()->SpawnActor<ABuildable>(NewBlueprint);
+	BuildableBlueprint->SetBuildableState(EBuildableState::BeingCreated);
 }
 
 void ARTSCamera::MoveBlueprintToMousePos()

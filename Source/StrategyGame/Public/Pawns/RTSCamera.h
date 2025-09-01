@@ -92,7 +92,7 @@ protected:
 	UPROPERTY() ABuildable* BuildableBlueprint = nullptr;
 
 	// The Structure that has been clicked on / selected.
-	UPROPERTY() AStructure* SelectedStructure = nullptr;
+	UPROPERTY() ABuildable* SelectedBuildable = nullptr;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -138,7 +138,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable)
-	AStructure* SetSelectedStructure(AStructure* NewSelectedStructure) { return SelectedStructure = NewSelectedStructure; }
+	ABuildable* SetSelectedBuildable(ABuildable* NewSelectedBuildable) { return SelectedBuildable = NewSelectedBuildable; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FVector SnapVectorToGrid(FVector InputPos, int32 GridSize);
@@ -158,7 +158,7 @@ public:
 	int32 GetSnappingSize() { return GetStrategyGameMode()->GetSnappingSize(); }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	AStructure* GetSelectedStructure() { return SelectedStructure; }
+	ABuildable* GetSelectedBuildable() { return SelectedBuildable; }
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	ABuildable* GetBuildableBlueprint() { return BuildableBlueprint; }

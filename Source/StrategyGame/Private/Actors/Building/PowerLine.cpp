@@ -13,14 +13,14 @@ APowerLine::APowerLine()
 	PrimaryActorTick.bCanEverTick = true;
 
 	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
-	Sphere->SetupAttachment(StaticMesh);
+	Sphere->SetupAttachment(StaticMeshComponent);
 	Sphere->SetHiddenInGame(false);
 	Sphere->SetCollisionProfileName("PowerTrigger");
 	Sphere->OnComponentBeginOverlap.AddUniqueDynamic(this, &ThisClass::OnPowerOverlapBegin);
 	Sphere->OnComponentEndOverlap.AddUniqueDynamic(this, &ThisClass::OnPowerOverlapEnd);
 
 	PowerLineArrow = CreateDefaultSubobject<UArrowComponent>("Power Line Pos");
-	PowerLineArrow->SetupAttachment(StaticMesh);
+	PowerLineArrow->SetupAttachment(StaticMeshComponent);
 }
 
 // Called when the game starts or when spawned
