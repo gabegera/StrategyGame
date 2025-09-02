@@ -18,8 +18,8 @@ void ACustomActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GetStrategyGameState()->ResourcesChangedDelegate.AddUniqueDynamic(this, &ThisClass::BP_OnResourcesChanged);
-	GetStrategyGameState()->ResourcesChangedDelegate.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
+	GetStrategyGameState()->OnResourcesChanged.AddUniqueDynamic(this, &ThisClass::BP_OnResourcesChanged);
+	GetStrategyGameState()->OnResourcesChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
 }
 
 void ACustomActor::OnResourcesChanged()

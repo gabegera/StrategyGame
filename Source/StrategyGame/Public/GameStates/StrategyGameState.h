@@ -32,6 +32,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FResourcesChangedDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPopulationChangedDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAssignedWorkersChangedDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureBuiltDelegate, AStructure*, BuiltStructure);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSkyscraperModuleAddedDelegate, ASkyscraper*, Skyscraper, ASkyscraperModule*, AddedModule);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureDestroyedDelegate, AStructure*, DestroyedStructure);
 
 UCLASS()
@@ -65,24 +66,29 @@ protected:
 public:
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
-	FResourcesChangedDelegate ResourcesChangedDelegate;
+	FResourcesChangedDelegate OnResourcesChanged;
 	
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
-	FResourcesChangedDelegate PopulationChangedDelegate;
+	FResourcesChangedDelegate OnPopulationChanged;
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
-	FAssignedWorkersChangedDelegate AssignedWorkersChangedDelegate;
+	FAssignedWorkersChangedDelegate OnAssignedWorkersChanged;
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FStructureBuiltDelegate StructureBuiltDelegate;
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FSkyscraperModuleAddedDelegate OnSkyscraperModuleAdded;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FStructureBuiltDelegate StructureDestroyedDelegate;
 
 	// Ensures that resources are between 0 and their maximum capacity.
+	UFUNCTION()
 	void ClampResources();
 
 	// Finds all the structures that have been placed and returns an array.
+	UFUNCTION()
 	TArray<AStructure*> FindAllStructures();
 
 	// ------ GETTERS ------

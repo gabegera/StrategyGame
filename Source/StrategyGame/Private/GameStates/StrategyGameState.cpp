@@ -149,7 +149,7 @@ float AStrategyGameState::AddResources(EResourceType ResourceType, float Amount)
 
 	ClampResources();
 
-	ResourcesChangedDelegate.Broadcast();
+	OnResourcesChanged.Broadcast();
 	return GetResourceAmount(ResourceType);
 }
 
@@ -189,7 +189,7 @@ float AStrategyGameState::ConsumeResources(EResourceType ResourceType, float Amo
 
 	ClampResources();
 
-	ResourcesChangedDelegate.Broadcast();
+	OnResourcesChanged.Broadcast();
 	return GetResourceAmount(ResourceType);
 }
 
@@ -197,7 +197,7 @@ int32 AStrategyGameState::IncreaseResourceStorage(EResourceType ResourceType, in
 {
 	MaximumResources.Add(ResourceType, GetResourceCapacity(ResourceType) + IncreaseAmount);
 	ClampResources();
-	ResourcesChangedDelegate.Broadcast();
+	OnResourcesChanged.Broadcast();
 	return GetResourceCapacity(ResourceType);
 }
 
@@ -205,7 +205,7 @@ int32 AStrategyGameState::DecreaseResourceStorage(EResourceType ResourceType, in
 {
 	MaximumResources.Add(ResourceType, FMath::Clamp(GetResourceCapacity(ResourceType) - DecreaseAmount, 0, GetResourceCapacity(ResourceType)));
 	ClampResources();
-	ResourcesChangedDelegate.Broadcast();
+	OnResourcesChanged.Broadcast();
 	return GetResourceCapacity(ResourceType);
 }
 
@@ -213,7 +213,7 @@ int32 AStrategyGameState::IncreasePopulation(ECitizenType WorkerType, int32 Incr
 {
 	Population.Add(WorkerType, GetPopulation(WorkerType) + IncreaseAmount);
 
-	PopulationChangedDelegate.Broadcast();
+	OnPopulationChanged.Broadcast();
 	return GetPopulation(WorkerType);
 }
 
@@ -221,18 +221,21 @@ int32 AStrategyGameState::DecreasePopulation(ECitizenType WorkerType, int32 Decr
 {
 	Population.Add(WorkerType, GetPopulation(WorkerType) - DecreaseAmount);
 
-	PopulationChangedDelegate.Broadcast();
+	OnPopulationChanged.Broadcast();
 	return GetPopulation(WorkerType);
 }
 
 int32 AStrategyGameState::IncreasePopulationCapacity(int32 IncreaseAmount)
 {
-	PopulationChangedDelegate.Broadcast();
-	return PopulationCapacity += IncreaseAmount;
+	PopulationCapacity += IncreaseAmount;
+	OnPopulationChanged.Broadcast();
+	return PopulationCapacity;
 }
 
 int32 AStrategyGameState::DecreasePopulationCapacity(int32 DecreaseAmount)
 {
-	PopulationChangedDelegate.Broadcast();
-	return PopulationCapacity = FMath::Clamp(PopulationCapacity - DecreaseAmount, 0, PopulationCapacity);
+	PopulationCapacity = FMath::Clamp(PopulationCapacity - DecreaseAmount, 0, PopulationCapacity);
+	OnPopulationChanged.Broadcast();
+	return PopulationCapacity;
+	
 }

@@ -5,6 +5,7 @@
 
 #include "GameplayDebuggerLocalController.h"
 #include "Characters/PlayerCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "Pawns/RTSCamera.h"
 
 void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -60,6 +61,9 @@ void ARTSPlayerController::BeginPlay()
 
     	SetupPlayerInputComponent(InputComponent);
     }
+
+	TArray<AActor*> FoundRTSCameras;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARTSCamera::StaticClass(), FoundRTSCameras);
 }
 
 void ARTSPlayerController::OnPossess(APawn* InPawn)

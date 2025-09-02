@@ -36,7 +36,7 @@ protected:
 public:
 
 	virtual bool Select_Implementation(ARTSCamera* SelectInstigator) override;
-	virutal bool Recycle_Implementation(ARTSCamera* DestroyInstigator) override;
+	virtual bool Recycle_Implementation(ARTSCamera* DestroyInstigator) override;
 
 	UFUNCTION(BlueprintCallable)
 	void SwitchToTopMesh();

@@ -101,7 +101,10 @@ void ARTSCamera::SelectTarget()
 		switch (CurrentRTSTool)
 		{
 		case SelectTool:
-			Execute_Select(Hit.GetActor(), this);
+			 if (Execute_Select(Hit.GetActor(), this))
+			 {
+				 OnBuildableSelected.Broadcast(SelectedBuildable);
+			 }
 			break;
 		case RecycleTool:
 			Execute_Recycle(Hit.GetActor(), this);
@@ -119,6 +122,7 @@ void ARTSCamera::SelectTarget()
 void ARTSCamera::DeselectTarget()
 {
 	SelectedBuildable = nullptr;
+	OnBuildableDeSelected.Broadcast();
 }
 
 void ARTSCamera::CancelAction()

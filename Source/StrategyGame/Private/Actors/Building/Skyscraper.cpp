@@ -19,55 +19,6 @@ void ASkyscraper::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ASkyscraper::CompleteConstruction()
-{
-	Super::CompleteConstruction();
-
-	BuildModules();
-}
-
-void ASkyscraper::BuildModules()
-{
-	verifyf(ModuleClass, TEXT("ASkyscraper::BuildModules ModuleClass is not set."))
-
-	for (auto Module : Modules)
-	{
-		Module->Destroy();
-	}
-		
-	Modules.SetNum(MaxSkyscraperSections);
-
-	for (int32 i = 0; i < MaxSkyscraperSections; i++)
-	{
-		ASkyscraperModule* NewModule = GetWorld()->SpawnActor<ASkyscraperModule>(ModuleClass);
-		
-		if (i == MaxSkyscraperSections - 1) // If is the last module
-		{
-			NewModule->SwitchToTopMesh();
-		}
-		else
-		{
-			NewModule->SwitchToDefaultMesh();
-		}
-			
-		Modules[i] = NewModule;
-
-		if (i > 0) // If the module isn't at the bottom of the stack.
-		{
-			ASkyscraperModule* PrevModule = Modules[i-1];
-			FVector PrevModuleBounds = PrevModule->GetStaticMeshComponent()->GetStaticMesh()->GetBounds().BoxExtent;
-			NewModule->SetActorLocation(PrevModule->GetActorLocation() + FVector::UpVector * PrevModuleBounds.Z * 2);
-		}
-		else
-		{
-			FVector SkyscraperFoundationBounds = StaticMeshComponent->GetStaticMesh()->GetBounds().BoxExtent;
-			NewModule->SetActorLocation(StaticMeshComponent->GetComponentLocation() + FVector::UpVector * SkyscraperFoundationBounds.Z * 2);
-		}
-
-		NewModule->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepWorldTransform);
-	}
-}
-
 void ASkyscraper::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -75,7 +26,39 @@ void ASkyscraper::OnConstruction(const FTransform& Transform)
 
 void ASkyscraper::AddModule(TSubclassOf<ASkyscraperModule> ModuleToAdd)
 {
-	
+	if (Modules.Num() >= MaxSkyscraperModules) return;
+
+	ASkyscraperModule* NewModule = GetWorld()->SpawnActor<ASkyscraperModule>(ModuleToAdd);
+	Modules.AddUnique(NewModule);
+
+	if (Modules.Last() == NewModule)
+    {
+    	NewModule->SwitchToTopMesh();
+		for (auto Module : Modules)
+		{
+			if (Module != NewModule) Module->SwitchToDefaultMesh();
+		}
+    }
+    else
+    {
+    	NewModule->SwitchToDefaultMesh();
+    }
+
+	if (Modules.Num() > 1)
+	{
+		ASkyscraperModule* PrevModule = Modules.Last(1);
+		FVector PrevModuleBounds = PrevModule->GetStaticMeshComponent()->GetStaticMesh()->GetBounds().BoxExtent;
+		NewModule->SetActorLocation(PrevModule->GetActorLocation() + FVector::UpVector * PrevModuleBounds.Z * 2);
+	}
+	else
+	{
+		FVector SkyscraperFoundationBounds = StaticMeshComponent->GetStaticMesh()->GetBounds().BoxExtent;
+		NewModule->SetActorLocation(StaticMeshComponent->GetComponentLocation() + FVector::UpVector * SkyscraperFoundationBounds.Z * 2);
+	}
+
+	NewModule->AttachToComponent(StaticMeshComponent, FAttachmentTransformRules::KeepWorldTransform);
+
+	GetStrategyGameState()->OnSkyscraperModuleAdded.Broadcast(this, NewModule);
 }
 
 void ASkyscraper::Recycle()
@@ -92,7 +75,7 @@ bool ASkyscraper::Select_Implementation(ARTSCamera* SelectInstigator)
 {
 	SelectInstigator->SetSelectedBuildable(this);
 	
-	return Super::Select_Implementation(SelectInstigator);
+	return true;
 }
 
 // Called every frame

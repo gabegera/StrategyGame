@@ -24,6 +24,9 @@ enum ERTSTool
 	RecycleTool			UMETA(DisplayName="Destroy Tool"),
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableSelectedDelegate, ABuildable*, SelectedBuildable);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBuildableDeSelectedDelegate);
+
 UCLASS()
 class STRATEGYGAME_API ARTSCamera : public APawn, public IBuildingInterface
 {
@@ -98,6 +101,12 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FBuildableSelectedDelegate OnBuildableSelected;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FBuildableDeSelectedDelegate OnBuildableDeSelected;
 	
 	void Move(FVector2D MoveInput);
 	
