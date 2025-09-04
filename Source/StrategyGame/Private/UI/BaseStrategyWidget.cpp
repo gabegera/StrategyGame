@@ -4,10 +4,10 @@
 
 #include "UI/BaseStrategyWidget.h"
 
-#include "GameStates/StrategyGameState.h"
-#include "GameModes/StrategyGameModeBase.h"
-#include "Controllers/RTSPlayerController.h"
-#include "Pawns/RTSCamera.h"
+#include "Game/StrategyGameState.h"
+#include "Game/StrategyGameModeBase.h"
+#include "Player/RTSPlayerController.h"
+#include "Player/RTSCamera.h"
 
 void UBaseStrategyWidget::NativeConstruct()
 {
