@@ -75,6 +75,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Cancel;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_RotateBuilding;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_EquipRecycleTool;	
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_1xSpeed;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_2xSpeed;
+	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_3xSpeed;
 	
 	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Look;
 	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Fire;
@@ -147,6 +150,12 @@ public:
 	void RTS_RotateBuilding();
 	
 	void RTS_EquipRecycleTool();
+
+	void RTS_Set1xSpeed();
+	
+	void RTS_Set2xSpeed();
+	
+	void RTS_Set3xSpeed();
 	
 	void ReturnToFirstPerson();
 

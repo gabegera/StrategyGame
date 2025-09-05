@@ -88,18 +88,7 @@ TArray<AStructure*> AStrategyGameState::FindAllStructures()
 
 void AStrategyGameState::UpdateTimeOfDay(float DeltaSeconds)
 {
-	switch (TimeScale)
-	{
-	case ETimeScale::OneTimesSpeed:
-		TimeOfDay += DeltaSeconds / GetStrategyGameMode()->GetSecondsInGameHours();
-		break;
-	case ETimeScale::TwoTimesSpeed:
-		TimeOfDay += (DeltaSeconds / GetStrategyGameMode()->GetSecondsInGameHours()) * 2.0f;
-		break;
-	case ETimeScale::ThreeTimesSpeed:
-		TimeOfDay += (DeltaSeconds / GetStrategyGameMode()->GetSecondsInGameHours()) * 3.0f;
-		break;
-	}
+	TimeOfDay += DeltaSeconds / GetStrategyGameMode()->GetSecondsInGameHours();
 
 	if (TimeOfDay >= 24.0f)
 	{

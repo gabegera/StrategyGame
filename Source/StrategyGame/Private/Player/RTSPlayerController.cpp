@@ -35,6 +35,9 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
 	Input->BindAction(Input_RTS_RotateBuilding, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_RotateBuilding);
 	Input->BindAction(Input_RTS_EquipRecycleTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRecycleTool);
+	Input->BindAction(Input_RTS_1xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set1xSpeed);
+	Input->BindAction(Input_RTS_2xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set2xSpeed);
+	Input->BindAction(Input_RTS_3xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set3xSpeed);
 
 	// TURRET INPUT
 	Input->BindAction(Input_Turret_Look, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Look);
@@ -253,6 +256,27 @@ void ARTSPlayerController::RTS_EquipRecycleTool()
 	if (ControllerMode != EControllerMode::RTS) return;
 
 	GetRTSCamera()->EquipRecycleTool();
+}
+
+void ARTSPlayerController::RTS_Set1xSpeed()
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	GetStrategyGameState()->SetTimeScale(ETimeScale::OneTimesSpeed);
+}
+
+void ARTSPlayerController::RTS_Set2xSpeed()
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	GetStrategyGameState()->SetTimeScale(ETimeScale::TwoTimesSpeed);
+}
+
+void ARTSPlayerController::RTS_Set3xSpeed()
+{
+	if (ControllerMode != EControllerMode::RTS) return;
+
+	GetStrategyGameState()->SetTimeScale(ETimeScale::ThreeTimesSpeed);
 }
 
 void ARTSPlayerController::ReturnToFirstPerson()

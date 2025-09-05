@@ -62,7 +62,7 @@ protected:
 
 	// The Time of Day in hours. Ranges between 0 and 24
 	UPROPERTY(VisibleAnywhere, Category="Time")
-	float TimeOfDay = 0.0f;
+	float TimeOfDay = 12.0f;
 
 	// Number of days the city has survived.
 	UPROPERTY(VisibleAnywhere, Category="Time")
