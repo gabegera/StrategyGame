@@ -67,11 +67,12 @@ protected:
 
 	// ------ CONSTRUCTION ------
 
+	UPROPERTY()
 	FTimerHandle ConstructionTimer;
 
 	// How long it takes for the structure to be built.
 	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction")
-	float ConstructionTime = 3.0f;
+	float TimeToCompleteConstruction = 3.0f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Buildable|Construction")
 	TMap<EResourceType, int32> ConstructionCost;
@@ -102,8 +103,11 @@ protected:
 
 	virtual void BeginDestroy() override;
 
-	UFUNCTION() virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION() virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+	UFUNCTION()
+	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 public:
 	
@@ -117,10 +121,10 @@ public:
 	void BP_OnBuildableStateChanged(ABuildable* Buildable, EBuildableState NewBuildableState);
 
 	UFUNCTION()
-	void OnTimeScaleChanged(ETimeScale NewTimeScale);
+	void OnTimeScaleChanged(const ETimeScale NewTimeScale);
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnTimeScaleChanged")
-	void BP_OnTimeScaleChanged(ETimeScale NewTimeScale);
+	void BP_OnTimeScaleChanged(const ETimeScale NewTimeScale);
 
 	// ------ INTERFACE FUNCTIONS ------
 
@@ -152,9 +156,6 @@ public:
 
 	// Changes the mesh material depending on if the structure is being placed, is being constructed, or is unable to be built.
 	virtual void UpdateBuildMaterials();
-	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 	// ------ GETTERS ------
 
@@ -168,7 +169,7 @@ public:
 	EBuildableState GetBuildableState() { return BuildableState; }
 
 	UFUNCTION(BlueprintCallable)
-	EBuildableState SetBuildableState(EBuildableState NewMode) { BuildableStateChangedDelegate.Broadcast(this, NewMode); return BuildableState = NewMode;}
+	EBuildableState SetBuildableState(EBuildableState NewMode) { BuildableStateChangedDelegate.Broadcast(this, NewMode); return BuildableState = NewMode; }
 
 	UFUNCTION(BlueprintGetter)
 	FIntVector2 GetSnappingOffset() { return SnappingOffset; }

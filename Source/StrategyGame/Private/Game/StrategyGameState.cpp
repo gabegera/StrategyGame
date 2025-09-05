@@ -99,8 +99,6 @@ void AStrategyGameState::UpdateTimeOfDay(float DeltaSeconds)
 	case ETimeScale::ThreeTimesSpeed:
 		TimeOfDay += (DeltaSeconds / GetStrategyGameMode()->GetSecondsInGameHours()) * 3.0f;
 		break;
-	case ETimeScale::Paused:
-		break;
 	}
 
 	if (TimeOfDay >= 24.0f)
@@ -132,16 +130,13 @@ ETimeScale AStrategyGameState::SetTimeScale(ETimeScale NewTimeScale)
 	switch (NewTimeScale)
 	{
 	case ETimeScale::OneTimesSpeed:
-		
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 		break;
 	case ETimeScale::TwoTimesSpeed:
-		
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 2.0f);
 		break;
 	case ETimeScale::ThreeTimesSpeed:
-		
-		break;
-	case ETimeScale::Paused:
-		
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 3.0f);
 		break;
 	}
 	

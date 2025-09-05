@@ -62,8 +62,7 @@ void ARTSPlayerController::BeginPlay()
     	SetupPlayerInputComponent(InputComponent);
     }
 
-	TArray<AActor*> FoundRTSCameras;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARTSCamera::StaticClass(), FoundRTSCameras);
+	GetStrategyGameState()->OnTimeScaleChanged.AddUniqueDynamic(this, &ThisClass::OnTimeScaleChanged);
 }
 
 void ARTSPlayerController::OnPossess(APawn* InPawn)
@@ -80,6 +79,24 @@ void ARTSPlayerController::OnPossess(APawn* InPawn)
 		GetPlayerCharacter(); // Used to assign object pointer.
 		SetControllerMode(EControllerMode::FirstPerson);
 	}
+}
+
+void ARTSPlayerController::OnTimeScaleChanged(const ETimeScale NewTimeScale)
+{
+	switch (NewTimeScale)
+	{
+	case ETimeScale::OneTimesSpeed:
+		CustomTimeDilation = 1.0f;
+		break;
+	case ETimeScale::TwoTimesSpeed:
+		CustomTimeDilation = 1.0f / 2.0f;
+		break;
+	case ETimeScale::ThreeTimesSpeed:
+		CustomTimeDilation = 1.0f / 3.0f;
+		break;
+	}
+	
+	BP_OnTimeScaleChanged(NewTimeScale);
 }
 
 void ARTSPlayerController::FP_Move(const FInputActionInstance& Instance)
@@ -287,6 +304,26 @@ void ARTSPlayerController::Turret_StopAiming()
 void ARTSPlayerController::Turret_Reload()
 {
 	if (ControllerMode != EControllerMode::Turret) return;
+}
+
+AStrategyGameState* ARTSPlayerController::GetStrategyGameState()
+{
+	if (StrategyGameState == nullptr)
+	{
+		StrategyGameState = Cast<AStrategyGameState>(GetWorld()->GetGameState());
+	}
+
+	return StrategyGameState;
+}
+
+AStrategyGameModeBase* ARTSPlayerController::GetStrategyGameMode()
+{
+	if (StrategyGameMode == nullptr)
+	{
+		StrategyGameMode = Cast<AStrategyGameModeBase>(GetWorld()->GetAuthGameMode());
+	}
+
+	return StrategyGameMode;
 }
 
 APlayerCharacter* ARTSPlayerController::GetPlayerCharacter()

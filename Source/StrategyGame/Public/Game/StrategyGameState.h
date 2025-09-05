@@ -16,7 +16,6 @@ enum class ETimeScale : uint8
 	OneTimesSpeed		UMETA(DisplayName="1x Speed"),
 	TwoTimesSpeed		UMETA(DisplayName="2x Speed"),
 	ThreeTimesSpeed		UMETA(DisplayName="3x Speed"),
-	Paused				UMETA(DisplayName="Paused")
 };
 
 UENUM(BlueprintType, DisplayName="Resource Type")

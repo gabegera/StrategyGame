@@ -9,6 +9,8 @@
 #include "GameFramework/PlayerController.h"
 #include "RTSPlayerController.generated.h"
 
+class AStrategyGameModeBase;
+class AStrategyGameState;
 class APlayerCharacter;
 class ARTSCamera;
 
@@ -32,11 +34,21 @@ protected:
 	UPROPERTY(BlueprintAssignable)
 	FOnContollerModeChangedDelegate OnControllerModeChangedDelegate;
 
+	// WARNING: Do not call this directly, Call GetStrategyGameState();
+	UPROPERTY()
+	AStrategyGameState* StrategyGameState = nullptr;
+
+	// WARNING: Do not call this directly, Call GetStrategyGameModeBase();
+	UPROPERTY()
+	AStrategyGameModeBase* StrategyGameMode = nullptr;
+
 	// WARNING: Do not call this directly, Call GetPlayerCharacter();
-	UPROPERTY() APlayerCharacter* PlayerCharacter = nullptr;
+	UPROPERTY()
+	APlayerCharacter* PlayerCharacter = nullptr;
 
 	// WARNING: Do not call this directly, Call GetRTSCamera();
-	UPROPERTY() ARTSCamera* RTSCamera = nullptr;
+	UPROPERTY()
+	ARTSCamera* RTSCamera = nullptr;
 
 	EControllerMode ControllerMode = EControllerMode::FirstPerson;
 
@@ -94,6 +106,12 @@ protected:
 
 	virtual void OnPossess(APawn* InPawn) override;
 
+	UFUNCTION()
+	void OnTimeScaleChanged(const ETimeScale NewTimeScale);
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnTimeScaleChanged")
+	void BP_OnTimeScaleChanged(const ETimeScale NewTimeScale);
+
 public:
 
 	// ------ FIRST PERSON FUNCTIONS ------
@@ -145,6 +163,12 @@ public:
 	void Turret_Reload();
 
 	// ------ GETTERS ------
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
+	AStrategyGameState* GetStrategyGameState();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
+	AStrategyGameModeBase* GetStrategyGameMode();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
 	APlayerCharacter* GetPlayerCharacter();

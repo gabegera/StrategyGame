@@ -142,6 +142,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void MoveBlueprintToMousePos();
+
+	UFUNCTION()
+	void OnTimeScaleChanged(const ETimeScale NewTimeScale);
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnTimeScaleChanged")
+	void BP_OnTimeScaleChanged(const ETimeScale NewTimeScale);
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

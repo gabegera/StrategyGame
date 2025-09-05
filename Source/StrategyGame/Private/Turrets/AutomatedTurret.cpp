@@ -18,6 +18,7 @@ AAutomatedTurret::AAutomatedTurret()
 
 	SphereComponent = CreateDefaultSubobject<USphereComponent>("Turret Range");
 	SphereComponent->SetupAttachment(SceneComponent);
+	SphereComponent->SetCollisionProfileName("NoCollision");
 }
 
 // Called when the game starts or when spawned

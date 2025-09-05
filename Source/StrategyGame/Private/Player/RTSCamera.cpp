@@ -40,7 +40,7 @@ void ARTSCamera::Move(FVector2D MoveInput)
 {
 	float MoveSpeedMultiplier = 1000.0f;
 	FVector MovementVector = MoveInput.Y * GetActorForwardVector().RotateAngleAxis(GetActorRotation().Pitch, GetActorRightVector()) + MoveInput.X * GetActorRightVector();
-	MovementVector *= MoveSpeed * MoveSpeedMultiplier * GetWorld()->DeltaTimeSeconds;
+	MovementVector *= MoveSpeed * MoveSpeedMultiplier * FApp::GetDeltaTime();
 	
 	// Used to make the camera move faster when it's more zoomed out, and slower when it's more zoomed in.
 	MovementVector *= GetZoomDistanceAlpha() + 1.0f;
@@ -50,7 +50,7 @@ void ARTSCamera::Move(FVector2D MoveInput)
 
 void ARTSCamera::RotateCamera(float Input)
 {
-	float RotationAmount = Input * CameraRotationSpeed * GetWorld()->DeltaTimeSeconds;
+	float RotationAmount = Input * CameraRotationSpeed * FApp::GetDeltaTime();
 
 	SetActorRotation(FRotator(GetActorRotation().Pitch, GetActorRotation().Yaw + RotationAmount, GetActorRotation().Roll));
 }
@@ -69,7 +69,7 @@ void ARTSCamera::UpdateCameraPitch()
 void ARTSCamera::Zoom(float Input)
 {
 	float ZoomSpeedMultiplier = 1000.0f;
-	float ZoomValue = Input * ZoomSpeed * ZoomSpeedMultiplier * GetWorld()->DeltaTimeSeconds;
+	float ZoomValue = Input * ZoomSpeed * ZoomSpeedMultiplier * FApp::GetDeltaTime();
 	
 	// Used to make the camera zoom faster when it's more zoomed out, and slower when it's more zoomed in.
 	ZoomValue *= GetZoomDistanceAlpha() + 1.0f;
@@ -79,7 +79,7 @@ void ARTSCamera::Zoom(float Input)
 
 void ARTSCamera::UpdateZoom()
 {
-	SpringArm->TargetArmLength = FMath::InterpEaseInOut(SpringArm->TargetArmLength, ZoomDistanceTarget, GetWorld()->DeltaTimeSeconds * ZoomEasingSpeed, ZoomEasing);
+	SpringArm->TargetArmLength = FMath::InterpEaseInOut(SpringArm->TargetArmLength, ZoomDistanceTarget, FApp::GetDeltaTime() * ZoomEasingSpeed, ZoomEasing);
 	
 	SpringArm->TargetArmLength = FMath::Clamp(SpringArm->TargetArmLength, ZoomDistanceMin, ZoomDistanceMax);
 
@@ -166,6 +166,8 @@ void ARTSCamera::ExitRTSMode()
 
 	CancelAction();
 
+	GetStrategyGameState()->SetTimeScale(ETimeScale::OneTimesSpeed);
+
 	GetPlayerController()->Possess(GetPlayerController()->GetPlayerCharacter());
 }
 
@@ -208,6 +210,24 @@ void ARTSCamera::MoveBlueprintToMousePos()
 	NewLocation += FVector(BuildableBlueprint->GetSnappingOffset().X, BuildableBlueprint->GetSnappingOffset().Y, 0.0f);
 
 	BuildableBlueprint->MoveBuilding(NewLocation);
+}
+
+void ARTSCamera::OnTimeScaleChanged(const ETimeScale NewTimeScale)
+{
+	switch (NewTimeScale)
+	{
+	case ETimeScale::OneTimesSpeed:
+		CustomTimeDilation = 1.0f;
+		break;
+	case ETimeScale::TwoTimesSpeed:
+		CustomTimeDilation = 1.0f / 2.0f;
+		break;
+	case ETimeScale::ThreeTimesSpeed:
+		CustomTimeDilation = 1.0f / 3.0f;
+		break;
+	}
+	
+	BP_OnTimeScaleChanged(NewTimeScale);
 }
 
 // Called every frame

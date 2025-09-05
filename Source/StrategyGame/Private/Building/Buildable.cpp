@@ -134,24 +134,8 @@ void ABuildable::OnBuildableStateChanged(ABuildable* Buildable, EBuildableState 
 	}
 }
 
-void ABuildable::OnTimeScaleChanged(ETimeScale NewTimeScale)
+void ABuildable::OnTimeScaleChanged(const ETimeScale NewTimeScale)
 {
-	switch (NewTimeScale)
-	{
-	case ETimeScale::OneTimesSpeed:
-		CustomTimeDilation = 1.0f;
-		break;
-	case ETimeScale::TwoTimesSpeed:
-		CustomTimeDilation = 2.0f;
-		break;
-	case ETimeScale::ThreeTimesSpeed:
-		CustomTimeDilation = 3.0f;
-		break;
-	case ETimeScale::Paused:
-		CustomTimeDilation = 0.0f;
-		break;
-	}
-	
 	BP_OnTimeScaleChanged(NewTimeScale);
 }
 
@@ -183,13 +167,14 @@ void ABuildable::BeginConstruction()
 {
 	ConsumeConstructionResources();
 	
-	if (ConstructionTime == 0)
+	if (TimeToCompleteConstruction == 0)
 	{
 		CompleteConstruction();
 		return;
 	}
+
+	GetWorldTimerManager().SetTimer(ConstructionTimer, this, &ABuildable::CompleteConstruction, TimeToCompleteConstruction);
 	
-	GetWorldTimerManager().SetTimer(ConstructionTimer, this, &ABuildable::CompleteConstruction, ConstructionTime, false);
 	SetBuildableState(EBuildableState::UnderConstruction);
 	UpdateBuildMaterials();
 }
@@ -285,13 +270,6 @@ void ABuildable::UpdateBuildMaterials()
 			StaticMesh->SetMaterial(0, CanNotBuildMaterial);
 		}
 	}
-}
-
-// Called every frame
-void ABuildable::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
 }
 
 bool ABuildable::IsBuildingPermitted()
