@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "GameStates/StrategyGameState.h"
+#include "Game/StrategyGameState.h"
 #include "Engine/DataTable.h"
 #include "StructureData.generated.h"
 
