@@ -10,7 +10,7 @@ UHealthComponent::UHealthComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
+	MaxHealth = 100.0f;
 }
 
 
@@ -19,10 +19,17 @@ void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
-	
+	Health = MaxHealth;
 }
 
+float UHealthComponent::TakeDamage(float DamageAmount)
+{
+	Health -= DamageAmount;
+
+	Health = FMath::Clamp(Health, 0.0f, MaxHealth);
+	
+	return Health;
+}
 
 // Called every frame
 void UHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

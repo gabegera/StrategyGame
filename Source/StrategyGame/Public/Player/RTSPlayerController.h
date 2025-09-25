@@ -14,7 +14,7 @@ class AStrategyGameState;
 class APlayerCharacter;
 class ARTSCamera;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnContollerModeChangedDelegate);
+
 
 UENUM(BlueprintType)
 enum class EControllerMode : uint8
@@ -24,15 +24,16 @@ enum class EControllerMode : uint8
 	Turret		UMETA(DisplayName="Turret Mode"),
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FControllerModeChangedDelegate, EControllerMode, NewControllerMode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGamePausedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameUnPausedDelegate);
+
 UCLASS()
 class STRATEGYGAME_API ARTSPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
 protected:
-
-	UPROPERTY(BlueprintAssignable)
-	FOnContollerModeChangedDelegate OnControllerModeChangedDelegate;
 
 	// WARNING: Do not call this directly, Call GetStrategyGameState();
 	UPROPERTY()
@@ -63,7 +64,21 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Move;
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Look;
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Sprint;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Crouch;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Prone;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_SlowWalk;
 	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_Interact;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_UseItem;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_UseItemSecondary;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_ReloadWeapon;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_EquipSlot1;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_EquipSlot2;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_EquipSlot3;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_EquipSlot4;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_EquipSlot5;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_HolsterItem;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_DropItem;
+	UPROPERTY(EditAnywhere, Category = "Input|First Person") UInputAction* Input_FP_OpenObjectiveMenu;
 	
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_Move;
 	UPROPERTY(EditAnywhere, Category = "Input|RTS") UInputAction* Input_RTS_PanCamera;
@@ -84,7 +99,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Aim;
 	UPROPERTY(EditAnywhere, Category = "Input|Turret") UInputAction* Input_Turret_Reload;
 
-	UPROPERTY(EditAnywhere, Category = "Input") UInputAction* Input_ReturnToFirstPerson;
+	UPROPERTY(EditAnywhere, Category = "Input") UInputAction* Input_Exit;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	float FP_MouseSensitivity = 0.5f;
@@ -115,7 +130,37 @@ protected:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnTimeScaleChanged")
 	void BP_OnTimeScaleChanged(const ETimeScale NewTimeScale);
 
+	UFUNCTION()
+	void OnControllerModeChanged(EControllerMode NewControllerMode);
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnControllerModeChanged")
+	void BP_OnControllerModeChanged(EControllerMode NewControllerMode);
+
+	UFUNCTION()
+	void OnGamePaused();
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnGamePaused")
+	void BP_OnGamePaused();
+
+	UFUNCTION()
+	void OnGameUnPaused();
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnGameUnPaused")
+	void BP_OnGameUnPaused();
+
 public:
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FControllerModeChangedDelegate OnControllerModeChangedDelegate;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FGamePausedDelegate OnGamePausedDelegate;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FGameUnPausedDelegate OnGameUnPausedDelegate;
+
+	// Exits Turrets and RTS Mode, if the player isn't in either of those modes then it pauses the game.
+	void Exit();	
 
 	// ------ FIRST PERSON FUNCTIONS ------
 	
@@ -126,8 +171,42 @@ public:
 	void FP_Sprint();
 
 	void FP_StopSprinting();
+
+	void FP_Crouch();
+
+	void FP_Prone();
+
+	void FP_SlowWalk();
+
+	void FP_StopSlowWalking();
 	
 	void FP_Interact();
+
+	void FP_UseItemPrimary();
+
+	void FP_ReleaseItemPrimary();
+
+	void FP_UseItemSecondary();
+
+	void FP_ReleaseItemSecondary();
+
+	void FP_ReloadWeapon();
+
+	void FP_EquipSlot1();
+	
+	void FP_EquipSlot2();
+	
+	void FP_EquipSlot3();
+	
+	void FP_EquipSlot4();
+	
+	void FP_EquipSlot5();
+
+	void FP_HolsterItem();
+
+	void FP_DropItem();
+
+	void FP_OpenObjectiveMenu();
 
 	// ------ RTS FUNCTIONS ------
 
@@ -156,8 +235,6 @@ public:
 	void RTS_Set2xSpeed();
 	
 	void RTS_Set3xSpeed();
-	
-	void ReturnToFirstPerson();
 
 	// ------ TURRET FUNCTIONS ------
 

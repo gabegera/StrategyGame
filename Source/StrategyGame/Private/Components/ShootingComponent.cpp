@@ -4,6 +4,7 @@
 #include "Components/ShootingComponent.h"
 
 #include "Projectile.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 // Sets default values for this component's properties
@@ -29,12 +30,20 @@ void UShootingComponent::ShootProjectile(FVector ShotStart, FVector ShotTarget)
 	if (!Projectile) return;
 
 	FVector TargetDirection = ShotTarget - ShotStart;
-	TargetDirection.Normalize();
 
 	if (ProjectileCount < 1) ProjectileCount = 1;
 	for (int32 i = 0; i < ProjectileCount; i++)
 	{
 		AProjectile* SpawnedProjectile = GetWorld()->SpawnActor<AProjectile>(Projectile);
+
+		if (IsAiming())
+		{
+			TargetDirection = UKismetMathLibrary::RandomUnitVectorInConeInDegrees(TargetDirection, MaxAimingSpreadDegrees * 2);
+		}
+		else
+		{
+			TargetDirection = UKismetMathLibrary::RandomUnitVectorInConeInDegrees(TargetDirection, MaxHipfireSpreadDegrees * 2);
+		}		
 		
 		SpawnedProjectile->SetActorLocation(ShotStart);
 		SpawnedProjectile->GetProjectileMovement()->Velocity = TargetDirection * ProjectileSpeed;
@@ -58,9 +67,16 @@ void UShootingComponent::ShootHitscan(FVector ShotStart, FVector ShotTarget)
 void UShootingComponent::Shoot(FVector ShotStart, FVector ShotTarget, bool ShouldStartFireRateTimer)
 {
 	if (GetWorld()->GetTimerManager().IsTimerActive(FireRateTimer)) return;
-
+	
+	if (bIsSemiAuto && bIsTriggerPulled) return;
+	
 	if (IsReloading()) return;
-	if (!BottomlessClip && AmmoInMagazine <= 0) StartReload();
+	
+	if (!bInfiniteAmmo && AmmoInMagazine <= 0)
+	{
+		StartReload();
+		return;
+	}
 
 	if (Projectile)
 	{
@@ -71,18 +87,33 @@ void UShootingComponent::Shoot(FVector ShotStart, FVector ShotTarget, bool Shoul
 		ShootHitscan(ShotStart, ShotTarget);
 	}
 	
-	if (!BottomlessClip) AmmoInMagazine -= 1;
+	if (!bInfiniteAmmo) AmmoInMagazine -= 1;
 	
 	if (ShouldStartFireRateTimer)
 	{
-		bool ShouldTimerLoop = false;
-		GetWorld()->GetTimerManager().SetTimer(FireRateTimer, RoundsPerMinuteToRoundsPerSecond(FireRateRoundsPerMinute), ShouldTimerLoop);
+		bool bShouldTimerLoop = false;
+		GetWorld()->GetTimerManager().SetTimer(FireRateTimer, RoundsPerMinuteToRoundsPerSecond(FireRateRoundsPerMinute), bShouldTimerLoop);
 	}
-	
+
+	bIsTriggerPulled = true;
+}
+
+void UShootingComponent::StartAiming()
+{
+	bIsAiming = true;
+}
+
+void UShootingComponent::StopAiming()
+{
+	bIsAiming = false;
 }
 
 void UShootingComponent::StartReload()
 {
+	if (IsReloading()) return;
+
+	if (AmmoInMagazine == MagazineCapacity) return;
+	
 	if (ReloadTimeInSeconds <= 0)
 	{
 		CompleteReload();
@@ -90,6 +121,21 @@ void UShootingComponent::StartReload()
 	}
 
 	GetWorld()->GetTimerManager().SetTimer(ReloadTimer, this, &ThisClass::CompleteReload, ReloadTimeInSeconds);
+}
+
+void UShootingComponent::CancelReload()
+{
+	if (IsReloading())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ReloadTimer);
+	}
+}
+
+void UShootingComponent::ResetFireRate()
+{
+	bIsTriggerPulled = false;
+
+	GetWorld()->GetTimerManager().ClearTimer(FireRateTimer);
 }
 
 void UShootingComponent::CompleteReload()
@@ -103,6 +149,11 @@ void UShootingComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	if (IsReloading())
+	{
+		FString ReloadingString = "Reloading: ";
+		ReloadingString.Append(FString::SanitizeFloat(GetRemainingReloadTime()));
+		GEngine->AddOnScreenDebugMessage(850, GetRemainingReloadTime(), FColor::Yellow, ReloadingString);
+	}
 }
 

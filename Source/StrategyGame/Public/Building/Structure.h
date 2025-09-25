@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Buildable.h"
-#include "Components/TextRenderComponent.h"
+#include "Components/LookAtCameraTextRenderComponent.h"
 #include "DataTables/StructureData.h"
 #include "Interfaces/PowerInterface.h"
 #include "Structure.generated.h"
@@ -22,7 +22,7 @@ public:
 protected:
 
 	UPROPERTY(EditAnywhere)
-	UTextRenderComponent* StructureText;
+	ULookAtCameraTextRenderComponent* StructureText;
 
 	UPROPERTY() FTimerHandle ResourceGenerationTimer;
 	UPROPERTY() FTimerHandle ResourceConsumptionTimer;
@@ -33,7 +33,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Structure Data")
 	FDataTableRowHandle StructureDataTableRow;
 	
-	UPROPERTY() TMap<ECitizenType, int32> AssignedWorkers;
+	UPROPERTY()
+	TMap<ECitizenType, int32> AssignedWorkers;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

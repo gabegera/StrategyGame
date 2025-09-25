@@ -4,11 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "InteractableObject.h"
+#include "StrategyGameCharacter.h"
 #include "Turrets/RemoteControlTurret.h"
 #include "Camera/CameraComponent.h"
-#include "Components/HealthComponent.h"
 #include "Player/RTSPlayerController.h"
-#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interfaces/InteractionInterface.h"
 #include "PlayerCharacter.generated.h"
@@ -16,7 +15,7 @@
 class ARTSCamera;
 
 UCLASS()
-class STRATEGYGAME_API APlayerCharacter : public ACharacter, public IInteractionInterface
+class STRATEGYGAME_API APlayerCharacter : public AStrategyGameCharacter, public IInteractionInterface
 {
 	GENERATED_BODY()
 
@@ -26,17 +25,22 @@ public:
 
 protected:
 	
-	UPROPERTY() ARTSPlayerController* RTSPlayerController;
+	UPROPERTY()
+	ARTSPlayerController* RTSPlayerController;
 
 	UPROPERTY(EditAnywhere, Category="Components")
 	UCameraComponent* FirstPersonCamera = nullptr;
 
-	UPROPERTY(EditAnywhere, Category="Components")
-	UHealthComponent* HealthComponent = nullptr;
+	UPROPERTY()
+	float DefaultFOV;
 
 	// ------ MOVEMENT ------
 
-	UPROPERTY() float MaxWalkSpeed;
+	UPROPERTY()
+	float MaxWalkSpeed;
+
+	UPROPERTY(EditAnywhere, Category="Player Movement")
+	float MaxSlowWalkSpeed;
 	
 	UPROPERTY(EditAnywhere, Category="Player Movement")
 	float MaxSprintSpeed = 800.0f;
@@ -49,12 +53,22 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player Movement")
 	float MaximumSprintLookSpeed = 0.6f;
 
+	UPROPERTY()
+	float CrouchHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player Movement")
+	float ProneHeight;
+
 	// ------ INTERACTION ------
 
-	UPROPERTY() AActor* TargetInteractable;
-	UPROPERTY() FTimerHandle InteractionTimer;
+	UPROPERTY()
+	AActor* TargetInteractable = nullptr;
+	
+	UPROPERTY()
+	FTimerHandle InteractionTimer;
 
-	UPROPERTY() ARemoteControlTurret* ControlledTurret = nullptr;
+	UPROPERTY()
+	ARemoteControlTurret* ControlledTurret = nullptr;
 
 	// How many times per second will there be a check for an interactable.
 	UPROPERTY(EditAnywhere)
@@ -70,6 +84,8 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite)
 	UAnimationAsset* AnimationOverride = nullptr;
+
+	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -87,6 +103,32 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void StopSprinting();
 
+	virtual void Crouch(bool bClientSimulation = false) override;
+
+	virtual void UnCrouch(bool bClientSimulation = false) override;
+
+	UFUNCTION(BlueprintCallable)
+	void Prone();
+
+	UFUNCTION(BlueprintCallable)
+	void UnProne();
+
+	UFUNCTION(BlueprintCallable)
+	void SlowWalk();
+
+	UFUNCTION(BlueprintCallable)
+	void StopSlowWalking();
+
+	virtual void UseEquippedItem() override;
+
+	virtual void UseEquippedItemSecondary() override;
+
+	virtual void EquipItemBySlot(EEquipmentSlot Slot) override;
+
+	virtual void EquipItem(AEquippableItem* NewItem) override;
+
+	virtual void HolsterEquippedItem() override;
+	
 	// Attempts to send an interact Interface Function to the target Interactable.
 	UFUNCTION(BlueprintCallable)
 	void TriggerInteraction();
@@ -102,6 +144,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void Exit();
+
+	UFUNCTION(BlueprintCallable)
+	void ResetFOV();
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void OpenObjectiveMenu();
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -113,9 +161,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	ARTSPlayerController* GetPlayerController();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UHealthComponent* GetHealthComponent() { return HealthComponent; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UCameraComponent* GetFirstPersonCamera() { return FirstPersonCamera; }

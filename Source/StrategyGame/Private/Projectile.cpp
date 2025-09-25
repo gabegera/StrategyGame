@@ -40,20 +40,33 @@ void AProjectile::CheckCollision()
 
 	FHitResult Hit;
 	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), PreviousLocation, GetActorLocation(), Sphere->GetScaledSphereRadius(),
-		UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore, EDrawDebugTrace::None, Hit, true);
+		UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Hit, true);
 
 	PreviousLocation = GetActorLocation();
 
 	if (!Hit.GetActor()) return;
-		
-	Hit.GetActor()->TakeDamage(Damage, FPointDamageEvent(), GetInstigatorController(), GetInstigator());
 
-	GEngine->AddOnScreenDebugMessage(20, 3.0f, FColor::Green, Hit.GetActor()->GetName());
+	FString ProjectileHitString = "Projectile Hit: ";
+	ProjectileHitString.Append(Hit.GetActor()->GetName());
+	GEngine->AddOnScreenDebugMessage(20, 3.0f, FColor::Red, ProjectileHitString);
 
-	if (UStaticMeshComponent* SMComp = Hit.GetActor()->GetComponentByClass<UStaticMeshComponent>())
+	if (UStaticMeshComponent* HitStaticMesh = Hit.GetActor()->GetComponentByClass<UStaticMeshComponent>())
 	{
-		if (SMComp->IsSimulatingPhysics()) SMComp->AddImpulseAtLocation(GetVelocity() * KnockbackForceMultiplier * Damage, Hit.ImpactPoint);
+		if (HitStaticMesh->IsSimulatingPhysics())
+		{
+			HitStaticMesh->AddImpulseAtLocation(GetVelocity() * KnockbackForceMultiplier, Hit.ImpactPoint);
+		}
 	}
+
+	if (USkeletalMeshComponent* HitSkeletalMesh = Hit.GetActor()->GetComponentByClass<USkeletalMeshComponent>())
+	{
+		if (HitSkeletalMesh->IsSimulatingPhysics())
+		{
+			HitSkeletalMesh->AddImpulseAtLocation(GetVelocity() * KnockbackForceMultiplier, Hit.ImpactPoint);
+		}
+	}
+
+	Hit.GetActor()->TakeDamage(Damage, FPointDamageEvent(), GetInstigatorController(), GetInstigator());
 	
 	Destroy();
 }

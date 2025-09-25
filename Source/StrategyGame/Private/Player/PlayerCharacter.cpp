@@ -4,6 +4,7 @@
 #include "Player/PlayerCharacter.h"
 
 #include "Components/CapsuleComponent.h"
+#include "EquippableItems/EquippableItem.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/RTSCamera.h"
 
@@ -12,17 +13,17 @@ APlayerCharacter::APlayerCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
-	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
-
-	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, 90.0f));
-	GetMesh()->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
 	
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCamera->SetupAttachment(GetMesh(), "Head");
-	FirstPersonCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 20.0f));
-	FirstPersonCamera->SetRelativeRotation(FRotator(90.0f, 90.0f, 0.0f));
+	FirstPersonCamera->SetupAttachment(GetRootComponent());
 	FirstPersonCamera->bUsePawnControlRotation = true;
+
+	GetMesh()->SetupAttachment(FirstPersonCamera);
+}
+
+void APlayerCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
 }
 
 // Called when the game starts or when spawned
@@ -30,7 +31,9 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	DefaultFOV = GetFirstPersonCamera()->FieldOfView;
 	MaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	CrouchHeight = GetCharacterMovement()->GetCrouchedHalfHeight();
 	
 	GetWorldTimerManager().SetTimer(InteractionTimer, this, &APlayerCharacter::CheckForInteractable, 1.0f / InteractionChecksPerSecond, true);
 }
@@ -68,16 +71,74 @@ void APlayerCharacter::StopSprinting()
 	GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
 }
 
+void APlayerCharacter::Crouch(bool bClientSimulation)
+{
+	Super::Crouch(bClientSimulation);
+}
+
+void APlayerCharacter::UnCrouch(bool bClientSimulation)
+{	
+	Super::UnCrouch(bClientSimulation);
+}
+
+void APlayerCharacter::Prone()
+{
+	
+}
+
+void APlayerCharacter::UnProne()
+{
+	
+}
+
+void APlayerCharacter::SlowWalk()
+{
+	GetCharacterMovement()->MaxWalkSpeed = MaxSlowWalkSpeed;
+}
+
+void APlayerCharacter::StopSlowWalking()
+{
+	GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
+}
+
+void APlayerCharacter::UseEquippedItem()
+{
+	Super::UseEquippedItem();
+}
+
+void APlayerCharacter::UseEquippedItemSecondary()
+{
+	Super::UseEquippedItemSecondary();
+}
+
+void APlayerCharacter::EquipItemBySlot(EEquipmentSlot Slot)
+{
+	Super::EquipItemBySlot(Slot);
+}
+
+void APlayerCharacter::EquipItem(AEquippableItem* NewItem)
+{
+	Super::EquipItem(NewItem);
+	
+}
+
+void APlayerCharacter::HolsterEquippedItem()
+{
+	Super::HolsterEquippedItem();
+}
+
 void APlayerCharacter::TriggerInteraction()
 {
 	if (!TargetInteractable) return;
 
+	if (CharacterInventoryComponent->GetCarriedEquipment().Contains(Cast<AEquippableItem>(TargetInteractable))) return;
+	
 	Cast<IInteractionInterface>(TargetInteractable)->Interact(this);
 }
 
 void APlayerCharacter::CheckForInteractable()
 {
-	FHitResult Hit;
+	TArray<FHitResult> Hits;
 	FVector TraceStart = FirstPersonCamera->GetComponentLocation();
 	FVector TraceEnd = TraceStart + FirstPersonCamera->GetForwardVector() * InteractionRange;
 	bool TraceComplex = false;
@@ -86,17 +147,19 @@ void APlayerCharacter::CheckForInteractable()
 	ActorsToIgnore.Add(this);
 	bool IgnoreSelf = true;
 
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), TraceStart, TraceEnd, InteractionRadius, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		TraceComplex, ActorsToIgnore, EDrawDebugTrace::None, Hit, IgnoreSelf);
+	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), TraceStart, TraceEnd, InteractionRadius, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		TraceComplex, ActorsToIgnore, EDrawDebugTrace::None, Hits, IgnoreSelf);
 
-	if (Hit.GetActor() && Hit.GetActor()->Implements<UInteractionInterface>())
+	for (FHitResult Hit : Hits)
 	{
-		TargetInteractable = Hit.GetActor();
+		if (Hit.GetActor() && Hit.GetActor()->Implements<UInteractionInterface>())
+		{
+			TargetInteractable = Hit.GetActor();
+			return;
+		}
 	}
-	else
-	{
-		TargetInteractable = nullptr;
-	}
+	
+	TargetInteractable = nullptr;
 }
 
 void APlayerCharacter::SwitchToRTSCam(ARTSCamera* TargetCamera)
@@ -121,6 +184,11 @@ void APlayerCharacter::Exit()
 	SetActorEnableCollision(true);
 	GetMesh()->SetAnimation(nullptr);
 	FirstPersonCamera->bUsePawnControlRotation = true;
+}
+
+void APlayerCharacter::ResetFOV()
+{
+	FirstPersonCamera->FieldOfView = DefaultFOV;
 }
 
 // Called every frame

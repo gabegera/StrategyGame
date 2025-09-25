@@ -17,7 +17,7 @@ AStructure::AStructure()
 
 	StaticMeshComponent->SetCollisionProfileName("Selectable");
 
-	StructureText = CreateDefaultSubobject<UTextRenderComponent>("Structure Text");
+	StructureText = CreateDefaultSubobject<ULookAtCameraTextRenderComponent>("Structure Text");
 	StructureText->SetupAttachment(StaticMeshComponent);
 	StructureText->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 	StructureText->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
@@ -289,10 +289,6 @@ void AStructure::UpdateBuildMaterials()
 void AStructure::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	FVector CameraLocation = GEngine->GetFirstLocalPlayerController(GetWorld())->PlayerCameraManager->GetCameraLocation();
-	FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(StructureText->GetComponentLocation(), CameraLocation);
-	StructureText->SetWorldRotation(LookAtRotation);
 }
 
 bool AStructure::IsBuildingPermitted()
