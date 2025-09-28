@@ -6,19 +6,25 @@
 
 #include "Game/StrategyGameState.h"
 #include "Game/StrategyGameModeBase.h"
+#include "Game/UpgradesSubsystem.h"
 #include "Player/RTSPlayerController.h"
 #include "Player/RTSCamera.h"
 
 void UBaseStrategyWidget::NativeConstruct()
 {
 	if (GetRTSPlayerController()) GetRTSPlayerController()->OnPossessedPawnChanged.AddUniqueDynamic(this, &ThisClass::OnControllerPawnChanged);
+	
+	UCityResourcesSubsystem::OnResourcesChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
+	UCityResourcesSubsystem::OnPopulationChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
+	UCityResourcesSubsystem::OnAssignedWorkersChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
+
+	UUpgradesSubsystem::OnUpgradeUnlocked.AddUniqueDynamic(this, &ThisClass::OnUpgradeUnlocked);
+	
 	if (GetStrategyGameState())
 	{
-		GetStrategyGameState()->OnResourcesChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
-		GetStrategyGameState()->OnPopulationChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
-		GetStrategyGameState()->OnAssignedWorkersChanged.AddUniqueDynamic(this, &ThisClass::OnResourcesChanged);
 		GetStrategyGameState()->OnSkyscraperModuleAdded.AddUniqueDynamic(this, &ThisClass::OnSkyscraperModuleAdded);
 	}
+	
 }
 
 void UBaseStrategyWidget::OnControllerPawnChanged(APawn* OldPawn, APawn* NewPawn)
@@ -57,6 +63,11 @@ void UBaseStrategyWidget::OnAssignedWorkersChanged()
 	BP_OnAssignedWorkersChanged();
 }
 
+void UBaseStrategyWidget::OnUpgradeUnlocked(struct FUpgrade UnlockedUpgrade)
+{
+	BP_OnUpgradeUnlocked(UnlockedUpgrade);
+}
+
 void UBaseStrategyWidget::OnStructureBuilt(AStructure* BuiltStructure)
 {
 	BP_OnStructureBuilt(BuiltStructure);
@@ -66,7 +77,6 @@ void UBaseStrategyWidget::OnSkyscraperModuleAdded(ASkyscraper* Skyscraper, ASkys
 {
 	BP_OnSkyscraperModuleAdded(Skyscraper, AddedModule);
 }
-
 
 AStrategyGameState* UBaseStrategyWidget::GetStrategyGameState()
 {

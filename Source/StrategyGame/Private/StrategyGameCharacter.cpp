@@ -17,8 +17,9 @@ AStrategyGameCharacter::AStrategyGameCharacter()
 
 	CharacterInventoryComponent = CreateDefaultSubobject<UCharacterInventoryComponent>("Inventory");
 
-	DevEquipmentPositionArrow = CreateDefaultSubobject<UArrowComponent>("Dev Equipment Position");
-	DevEquipmentPositionArrow->SetupAttachment(GetMesh());
+	EquipmentPositionArrowComponent = CreateDefaultSubobject<UArrowComponent>("Dev Equipment Position");
+	EquipmentPositionArrowComponent->SetupAttachment(GetMesh());
+	EquipmentPositionArrowComponent->SetRelativeLocation(FVector(0.0f, 40.0f, 140.0f));
 
 	OnItemEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemEquipped);
 	OnItemUnEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemUnEquipped);
@@ -98,11 +99,17 @@ void AStrategyGameCharacter::ReloadEquippedItem()
 	}
 }
 
+void AStrategyGameCharacter::SpawnEquippable(TSubclassOf<AEquippableItem> EquippableClass)
+{
+	AEquippableItem* NewItem = GetWorld()->SpawnActor<AEquippableItem>(EquippableClass);
+	PickupEquippable(NewItem);
+}
+
 void AStrategyGameCharacter::PickupEquippable(AEquippableItem* NewItem, bool EquipPickup)
 {
 	NewItem->OnPickedUpDelegate.Broadcast();
 	
-	NewItem->AttachToComponent(DevEquipmentPositionArrow, FAttachmentTransformRules::SnapToTargetIncludingScale);
+	NewItem->AttachToComponent(EquipmentPositionArrowComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
 	NewItem->SetActorRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 	CharacterInventoryComponent->AddEquippable(NewItem);
 	
@@ -114,15 +121,30 @@ void AStrategyGameCharacter::PickupEquippable(AEquippableItem* NewItem, bool Equ
 	}
 }
 
-void AStrategyGameCharacter::EquipItemBySlot(const EEquipmentSlot TargetSlot)
+void AStrategyGameCharacter::EquipItemBySlot(const EEquipmentSlot InSlot)
 {
 	if (!CharacterInventoryComponent) return;
 
 	for (AEquippableItem* CarriedItem : CharacterInventoryComponent->GetCarriedEquipment())
 	{
-		if (CarriedItem->GetEquipmentSlot() == TargetSlot && CarriedItem)
+		if (CarriedItem->GetEquipmentSlot() == InSlot && CarriedItem != EquippedItem)
 		{
 			EquipItem(CarriedItem);
+			return;
+		}
+	}
+}
+
+void AStrategyGameCharacter::EquipItemByClass(const TSubclassOf<AEquippableItem> InClass)
+{
+	if (!CharacterInventoryComponent) return;
+
+	for (AEquippableItem* CarriedItem : CharacterInventoryComponent->GetCarriedEquipment())
+	{
+		if (CarriedItem->GetClass() == InClass && CarriedItem != EquippedItem)
+		{
+			EquipItem(CarriedItem);
+			return;
 		}
 	}
 }
@@ -132,6 +154,11 @@ void AStrategyGameCharacter::EquipItem(AEquippableItem* NewItem)
 	if (EquippedItem)
 	{
 		HolsterEquippedItem();
+	}
+
+	if (!NewItem->IsAttachedTo(this))
+	{
+		PickupEquippable(NewItem);
 	}
 
 	EquippedItem = NewItem;

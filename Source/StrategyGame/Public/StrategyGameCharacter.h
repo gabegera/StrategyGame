@@ -34,8 +34,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Strategy Game Character|Components")
 	UCharacterInventoryComponent* CharacterInventoryComponent;
 
-	UPROPERTY(EditAnywhere, Category="Strategy Game Character|Components")
-	UArrowComponent* DevEquipmentPositionArrow;
+	// The position that equipment will be attacked to.
+	UPROPERTY()
+	UArrowComponent* EquipmentPositionArrowComponent;
 	
 	UPROPERTY(VisibleAnywhere)
 	AEquippableItem* EquippedItem = nullptr;
@@ -109,11 +110,17 @@ public:
 	virtual void ReloadEquippedItem();
 
 	UFUNCTION(BlueprintCallable)
+	void SpawnEquippable(TSubclassOf<AEquippableItem> EquippableClass);
+
+	UFUNCTION(BlueprintCallable)
 	void PickupEquippable(AEquippableItem* NewItem, bool EquipPickup = false);
 
 	// Equips the item that is currently occupying the desired slot.
 	UFUNCTION(BlueprintCallable)
-	virtual void EquipItemBySlot(const EEquipmentSlot TargetSlot);
+	void EquipItemBySlot(const EEquipmentSlot InSlot);
+
+	UFUNCTION(BlueprintCallable)
+	void EquipItemByClass(const TSubclassOf<AEquippableItem> InClass);
 
 	// Equips a new item by a pointer to the new item.
 	UFUNCTION(BlueprintCallable)

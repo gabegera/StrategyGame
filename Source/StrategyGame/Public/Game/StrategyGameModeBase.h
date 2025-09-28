@@ -6,10 +6,16 @@
 #include "GameFramework/GameModeBase.h"
 #include "StrategyGameModeBase.generated.h"
 
+class UStrategyGameInstance;
+
 UCLASS()
 class STRATEGYGAME_API AStrategyGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
+
+public:
+
+	AStrategyGameModeBase();
 
 protected:
 
@@ -17,11 +23,16 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Structure Building")
 	int32 SnappingSize = 500;
 
-	// How many real-life seconds it takes for an in-game hour to pass.
+	// How many real-life seconds it takes for an in-game minute to pass.
 	UPROPERTY(EditAnywhere, Category="Time")
-	float SecondsInGameHours = 5.0f;
+	float MinutesPassedPerSecond = 5.0f;
+
+	UFUNCTION()
+	void UpdateTimeOfDay(float DeltaSeconds);
 
 public:
+
+	virtual void Tick(float DeltaSeconds) override;
 
 	// Gets the size of the snapping grid for structures.
 	UFUNCTION(BlueprintGetter)
@@ -29,6 +40,6 @@ public:
 
 	// Gets how real-life seconds it takes for an in-game hour to pass.
 	UFUNCTION(BlueprintGetter)
-	float GetSecondsInGameHours() { return SecondsInGameHours; }
+	float GetMinutesPassedPerSecond() { return MinutesPassedPerSecond; }
 	
 };

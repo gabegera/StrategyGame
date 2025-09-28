@@ -1,11 +1,13 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Game/StrategyGameState.h"
 #include "Engine/DataTable.h"
+#include "Game/CityResourcesSubsystem.h"
 #include "StructureData.generated.h"
 
-USTRUCT(Blueprintable)
+enum class EResourceType : uint8;
+
+USTRUCT(Blueprintable, DisplayName="Structure Data")
 struct FStructureData : public FTableRowBase
 {
 	GENERATED_BODY()

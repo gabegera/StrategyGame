@@ -6,5 +6,4 @@
 URTSSaveGame::URTSSaveGame()
 {
 	SaveSlotName = TEXT("UnnamedSaveSlot");
-	UserIndex = 0;
 }

@@ -19,11 +19,14 @@ public:
 
 protected:
 
-	UPROPERTY() AStrategyGameState* StrategyGameState = nullptr;
-	UPROPERTY() AStrategyGameModeBase* StrategyGameMode = nullptr;
+	UPROPERTY()
+	AStrategyGameState* StrategyGameState = nullptr;
+	
+	UPROPERTY()
+	AStrategyGameModeBase* StrategyGameMode = nullptr;
 
 public:
-
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	AStrategyGameState* GetStrategyGameState();
 

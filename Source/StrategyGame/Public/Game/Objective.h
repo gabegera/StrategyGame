@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "CityResourcesSubsystem.h"
 #include "Destructible.h"
 #include "Enemies/EnemyCharacter.h"
 #include "Objective.generated.h"
@@ -10,7 +11,8 @@ enum class EObjectiveType : uint8
 {
 	KillEnemies = 0 UMETA(DisplayName="Kill Enemies"),
 	DestroyTargets = 1 UMETA(DisplayName="Destroy Targets"),
-	FreePrisoners = 2 UMETA(DisplayName="Free Prisoners")
+	FreePrisoners = 2 UMETA(DisplayName="Free Prisoners"),
+	StealResources = 3 UMETA(DisplayName="Steal Resources")
 };
 
 USTRUCT(BlueprintType)
@@ -25,6 +27,8 @@ struct FObjective
 		Title = "Unnamed Objective";
 		EnemyType = nullptr;
 		DestructibleType = nullptr;
+		bAnyResources = true;
+		ResourceType = EResourceType::AlienMaterial;
 		Progress = 0;
 		RequiredProgress = 1;
 	}
@@ -42,6 +46,8 @@ struct FObjective
 		ObjectiveType = InObjectiveType;
 		EnemyType = InEnemyType;
 		DestructibleType = nullptr;
+		bAnyResources = true;
+		ResourceType = EResourceType::AlienMaterial;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -50,15 +56,55 @@ struct FObjective
 	 * Constructor function for creating a "Destroy Targets" Objective.
 	 * @param InObjectiveType The type of objective.
 	 * @param InTitle The new title for the objective.
-	 * @param InDestructibleType The type of target that needs to be destroyed to progress the objective.
+	 * @param InResourceType The type of target that needs to be destroyed to progress the objective.
 	 * @param InRequiredProgress How many "Enemies Killed" are needed to complete the objective.
 	 */
-	FObjective(EObjectiveType InObjectiveType, FString InTitle, TSubclassOf<ADestructible> InDestructibleType, int32 InRequiredProgress)
+	FObjective(EObjectiveType InObjectiveType, FString InTitle, TSubclassOf<ADestructible> InResourceType, int32 InRequiredProgress)
 	{
 		Title = InTitle;
 		ObjectiveType = InObjectiveType;
 		EnemyType = nullptr;
-		DestructibleType = InDestructibleType;
+		DestructibleType = InResourceType;
+		bAnyResources = true;
+		ResourceType = EResourceType::AlienMaterial;
+		Progress = 0;
+		RequiredProgress = InRequiredProgress;
+	}
+
+	/**
+	 * Constructor function for creating a "Steal Resources" Objective.
+	 * @param InObjectiveType The type of objective.
+	 * @param InTitle The new title for the objective.
+	 * @param bInAnyResource If true, then any resource will progress this objective.
+	 * @param InRequiredProgress How many "Enemies Killed" are needed to complete the objective.
+	 */
+	FObjective(EObjectiveType InObjectiveType, FString InTitle, bool bInAnyResource, int32 InRequiredProgress)
+	{
+		Title = InTitle;
+		ObjectiveType = InObjectiveType;
+		EnemyType = nullptr;
+		DestructibleType = nullptr;
+		bAnyResources = bInAnyResource;
+		ResourceType = EResourceType::AlienMaterial;
+		Progress = 0;
+		RequiredProgress = InRequiredProgress;
+	}
+
+	/**
+	 * Constructor function for creating a "Steal Resources" Objective.
+	 * @param InObjectiveType The type of objective.
+	 * @param InTitle The new title for the objective.
+	 * @param InResourceType The type of resource that needs to be stolen to progress the objective.
+	 * @param InRequiredProgress How many "Enemies Killed" are needed to complete the objective.
+	 */
+	FObjective(EObjectiveType InObjectiveType, FString InTitle, EResourceType InResourceType, int32 InRequiredProgress)
+	{
+		Title = InTitle;
+		ObjectiveType = InObjectiveType;
+		EnemyType = nullptr;
+		DestructibleType = nullptr;
+		bAnyResources = false;
+		ResourceType = InResourceType;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -67,7 +113,7 @@ struct FObjective
 	 * Constructor function for creating an Objective.
 	 * @param InObjectiveType The type of objective.
 	 * @param InTitle The new title for the objective.
-	 * @param InRequiredProgress How many "Enemies Killed" are needed to complete the objective.
+	 * @param InRequiredProgress The amount of progress required to complete the objective.
 	 */
 	FObjective(EObjectiveType InObjectiveType, FString InTitle, int32 InRequiredProgress)
 	{
@@ -75,36 +121,46 @@ struct FObjective
 		Title = InTitle;
 		EnemyType = nullptr;
 		DestructibleType = nullptr;
+		bAnyResources = true;
+		ResourceType = EResourceType::AlienMaterial;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	EObjectiveType ObjectiveType;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString Title;
 
 	// The type of enemy that needs to be killed to progress the objective.
 	// If set to none, any enemy will count as objective progress.
-	UPROPERTY(EditAnywhere, meta=(EditCondition="ObjectiveType == EObjectiveType::KillEnemies", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ObjectiveType == EObjectiveType::KillEnemies", EditConditionHides))
 	TSubclassOf<AEnemyCharacter> EnemyType;
 
 	// The type of target that needs destroyed to progress the objective.
-	UPROPERTY(EditAnywhere, meta=(EditCondition="ObjectiveType == EObjectiveType::DestroyTargets", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ObjectiveType == EObjectiveType::DestroyTargets", EditConditionHides))
 	TSubclassOf<ADestructible> DestructibleType;
+
+	// If true, stealing any resource will progress the objective. If false, a resource type will need to be specified.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ObjectiveType == EObjectiveType::StealResources", EditConditionHides))
+	bool bAnyResources;
+
+	// The type of resource that needs stolen to progress the objective.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ObjectiveType == EObjectiveType::StealResources && !bAnyResources", EditConditionHides))
+	EResourceType ResourceType;
 
 	UPROPERTY(VisibleAnywhere)
 	int32 Progress;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 RequiredProgress;
 
 	bool IsComplete() const
 	{
 		return Progress >= RequiredProgress;
 	}
-
+	
 	// Returns a string for the Objective Type.
 	FString GetTypeString() const
 	{
@@ -118,6 +174,9 @@ struct FObjective
 			
 		case EObjectiveType::FreePrisoners:
 			return "Free Prisoners";
+
+		case EObjectiveType::StealResources:
+			return "Steal Resources";
 			
 		default:
 			return "Empty Objective Type";

@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/SphereComponent.h"
-#include "Game/StrategyGameState.h"
 #include "CustomActor.h"
+#include "Game/CityResourcesSubsystem.h"
 #include "ResourceNode.generated.h"
 
 class ABuildable;

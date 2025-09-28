@@ -3,6 +3,9 @@
 
 #include "CustomActor.h"
 
+#include "Game/StrategyGameModeBase.h"
+#include "Game/StrategyGameState.h"
+
 
 // Sets default values
 ACustomActor::ACustomActor()

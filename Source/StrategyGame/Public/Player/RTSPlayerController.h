@@ -120,6 +120,8 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent);
 
+	virtual void PostInitializeComponents() override;
+
 	virtual void BeginPlay() override;
 
 	virtual void OnPossess(APawn* InPawn) override;

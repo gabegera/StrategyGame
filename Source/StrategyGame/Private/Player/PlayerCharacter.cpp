@@ -111,15 +111,9 @@ void APlayerCharacter::UseEquippedItemSecondary()
 	Super::UseEquippedItemSecondary();
 }
 
-void APlayerCharacter::EquipItemBySlot(EEquipmentSlot Slot)
-{
-	Super::EquipItemBySlot(Slot);
-}
-
 void APlayerCharacter::EquipItem(AEquippableItem* NewItem)
 {
 	Super::EquipItem(NewItem);
-	
 }
 
 void APlayerCharacter::HolsterEquippedItem()
@@ -189,6 +183,11 @@ void APlayerCharacter::Exit()
 void APlayerCharacter::ResetFOV()
 {
 	FirstPersonCamera->FieldOfView = DefaultFOV;
+}
+
+void APlayerCharacter::OpenObjectiveMenu()
+{
+	
 }
 
 // Called every frame

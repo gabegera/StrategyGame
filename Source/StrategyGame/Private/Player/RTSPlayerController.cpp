@@ -3,7 +3,9 @@
 
 #include "Player/RTSPlayerController.h"
 
+#include "PlayerCharacterCheats.h"
 #include "EquippableItems/EquippableItem.h"
+#include "GameFramework/CheatManager.h"
 #include "Player/PlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/RTSCamera.h"
@@ -65,6 +67,14 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_Turret_Reload, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Reload);
 
 	Input->BindAction(Input_Exit, ETriggerEvent::Triggered, this, &ARTSPlayerController::Exit);
+}
+
+void ARTSPlayerController::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	AddCheats(true);
+	CheatManager->AddCheatManagerExtension(NewObject<UPlayerCharacterCheats>(UPlayerCharacterCheats::StaticClass()));
 }
 
 void ARTSPlayerController::BeginPlay()

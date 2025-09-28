@@ -20,7 +20,6 @@ class STRATEGYGAME_API UBaseStrategyWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-
 protected:
 
 	// Do not call directly, use their getter functions.
@@ -38,7 +37,6 @@ protected:
 	ARTSCamera* RTSCamera;
 
 	virtual void NativeConstruct() override;
-
 	
 	UFUNCTION()
 	void OnControllerPawnChanged(APawn* OldPawn, APawn* NewPawn);
@@ -77,6 +75,12 @@ protected:
 	void BP_OnAssignedWorkersChanged();
 
 	UFUNCTION()
+	void OnUpgradeUnlocked(struct FUpgrade UnlockedUpgrade);
+
+	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnUpgradeUnlocked")
+	void BP_OnUpgradeUnlocked(struct FUpgrade UnlockedUpgrade);
+
+	UFUNCTION()
 	void OnStructureBuilt(AStructure* BuiltStructure);
 
 	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnStructureBuilt")
@@ -87,7 +91,6 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnSkyscraperModuleAdded")
 	void BP_OnSkyscraperModuleAdded(ASkyscraper* Skyscraper, ASkyscraperModule* AddedModule);
-
 
 public:
 

@@ -99,10 +99,12 @@ public:
 	// ------ GETTERS ------
 
 	virtual bool IsBuildingPermitted() override;
+	
     UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsBuildingPermitted")
     bool BP_IsBuildingPermitted() { return IsBuildingPermitted(); }
 	
 	const FStructureData* GetStructureData();
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="GetStructureData")
 	FStructureData BP_GetStructureData() { return *GetStructureData();}
 

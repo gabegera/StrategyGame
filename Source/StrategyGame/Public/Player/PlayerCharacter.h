@@ -123,8 +123,6 @@ public:
 
 	virtual void UseEquippedItemSecondary() override;
 
-	virtual void EquipItemBySlot(EEquipmentSlot Slot) override;
-
 	virtual void EquipItem(AEquippableItem* NewItem) override;
 
 	virtual void HolsterEquippedItem() override;
@@ -148,7 +146,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ResetFOV();
 
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	UFUNCTION(BlueprintCallable)
 	void OpenObjectiveMenu();
 	
 	// Called every frame

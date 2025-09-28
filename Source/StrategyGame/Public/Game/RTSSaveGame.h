@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CityTimeSubsystem.h"
 #include "GameFramework/SaveGame.h"
 #include "RTSSaveGame.generated.h"
 
@@ -14,12 +15,17 @@ class STRATEGYGAME_API URTSSaveGame : public USaveGame
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere, Category = Basic)
+public:
+
+	URTSSaveGame();
+
+	UPROPERTY(VisibleAnywhere, Category="Save File")
 	FString SaveSlotName;
  
-	UPROPERTY(VisibleAnywhere, Category = Basic)
-	uint32 UserIndex;
- 
-	URTSSaveGame();
+	UPROPERTY(VisibleAnywhere, Category="Save File")
+	float TimeOfDay;
+
+	UPROPERTY(VisibleAnywhere, Category="Save File")
+	int32 DaysCityHasSurvived;
 	
 };

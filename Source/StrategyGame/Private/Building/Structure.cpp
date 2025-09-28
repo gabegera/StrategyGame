@@ -79,13 +79,13 @@ void AStructure::ActivateStructureEffects()
 			EResourceType ResourceType = Resource.Key;
 			int32 Amount = Resource.Value;
 
-			GetStrategyGameState()->IncreaseResourceStorage(ResourceType, Amount);
+			UCityResourcesSubsystem::IncreaseCityResourceStorage(ResourceType, Amount);
 		}
 	}
 
 	if (DoesIncreasePopulationCapacity())
 	{
-		GetStrategyGameState()->IncreasePopulationCapacity(GetAdditionalPopulationCapacity());
+		UCityResourcesSubsystem::IncreaseCityPopulationCapacity(GetAdditionalPopulationCapacity());
 	}
 }
 
@@ -144,7 +144,7 @@ void AStructure::RevertStorageCapacity()
 		EResourceType ResourceType = Resource.Key;
 		int32 ResourceAmount = Resource.Value;
 		
-		GetStrategyGameState()->DecreaseResourceStorage(ResourceType, ResourceAmount);
+		UCityResourcesSubsystem::DecreaseCityResourceStorage(ResourceType, ResourceAmount);
 	}
 }
 
@@ -160,7 +160,7 @@ void AStructure::GenerateResources()
 		EResourceType ResourceType = Resource.Key;
 		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
 		
-		GetStrategyGameState()->AddResources(ResourceType, ResourceAmount);
+		UCityResourcesSubsystem::AddCityResources(ResourceType, ResourceAmount);
 	}
 }
 
@@ -176,7 +176,7 @@ void AStructure::ConsumeResources()
 		EResourceType ResourceType = Resource.Key;
 		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
 		
-		GetStrategyGameState()->ConsumeResources(ResourceType, ResourceAmount);
+		UCityResourcesSubsystem::ConsumeCityResources(ResourceType, ResourceAmount);
 	}
 }
 
@@ -189,8 +189,8 @@ void AStructure::DrainResourceFromNode()
 {
 	if (TargetResourceNode)
 	{
-		int32 ResourceStorageCapacity = GetStrategyGameState()->GetResourceCapacity(TargetResourceNode->GetResourceType());
-		float ResourceStorageAmount = GetStrategyGameState()->GetResourceAmount(TargetResourceNode->GetResourceType());
+		int32 ResourceStorageCapacity = UCityResourcesSubsystem::GetCityResourceCapacity(TargetResourceNode->GetResourceType());
+		float ResourceStorageAmount = UCityResourcesSubsystem::GetCityResourceAmount(TargetResourceNode->GetResourceType());
 		if (ResourceStorageCapacity >= ResourceStorageAmount + GetResourcesToConsumePerSecond().FindRef(TargetResourceNode->GetResourceType()))
 		{
 			float AmountToDrain = GetResourcesToConsumePerSecond().FindRef(TargetResourceNode->GetResourceType());
@@ -239,13 +239,13 @@ void AStructure::AssignWorkers(ECitizenType WorkerType, int32 Amount)
 		return;
 	}
 
-	if (GetStrategyGameState()->GetUnemployedPopulation(WorkerType) >= Amount)
+	if (UCityResourcesSubsystem::GetCityUnemployedPopulation(WorkerType) >= Amount)
 	{
 		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + Amount);
 	}
 	else
 	{
-		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + GetStrategyGameState()->GetUnemployedPopulation(WorkerType));
+		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + UCityResourcesSubsystem::GetCityUnemployedPopulation(WorkerType));
 	}
 }
 

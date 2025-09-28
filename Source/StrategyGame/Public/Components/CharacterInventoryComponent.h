@@ -28,7 +28,7 @@ protected:
 public:
 
 	UFUNCTION(BlueprintCallable, Category="Character Inventory")
-	TArray<AEquippableItem*> GetCarriedEquipment() { return CarriedEquipment; }
+	TArray<AEquippableItem*>& GetCarriedEquipment() { return CarriedEquipment; }
 
 	UFUNCTION(BlueprintCallable, Category="Character Inventory")
 	void AddEquippable(AEquippableItem* NewEquippable);

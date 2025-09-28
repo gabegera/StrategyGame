@@ -194,7 +194,7 @@ void ABuildable::ConsumeConstructionResources()
 		EResourceType ResourceType = Resource.Key;
 		int32 ResourceAmount = Resource.Value;
 		
-		GetStrategyGameState()->ConsumeResources(ResourceType, ResourceAmount);
+		UCityResourcesSubsystem::ConsumeCityResources(ResourceType, ResourceAmount);
 	}
 }
 
@@ -205,7 +205,7 @@ void ABuildable::RefundConstructionMaterials()
 		EResourceType ResourceType = Resource.Key;
 		int32 ResourceAmount = Resource.Value;
 		
-		GetStrategyGameState()->AddResources(ResourceType, ResourceAmount);
+		UCityResourcesSubsystem::AddCityResources(ResourceType, ResourceAmount);
 	}
 }
 
@@ -296,7 +296,7 @@ bool ABuildable::HaveEnoughResourcesToBuild()
 		EResourceType ResourceType = ResourceCost.Key;
 		int32 AmountNeeded = ResourceCost.Value;
 		
-		if (GetStrategyGameState()->GetResourceAmount(ResourceType) < AmountNeeded)
+		if (UCityResourcesSubsystem::GetCityResourceAmount(ResourceType) < AmountNeeded)
 		{
 			return false;
 		}

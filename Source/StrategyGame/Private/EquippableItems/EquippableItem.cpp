@@ -21,6 +21,11 @@ AEquippableItem::AEquippableItem()
 	OnUnEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnUnEquipped);
 	OnPickedUpDelegate.AddUniqueDynamic(this, &ThisClass::OnPickedUp);
 	OnDroppedDelegate.AddUniqueDynamic(this, &ThisClass::OnDropped);
+
+	OnItemPrimaryUsedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemPrimaryUsed);
+	OnItemPrimaryReleasedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemPrimaryReleased);
+	OnItemSecondaryUsedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemSecondaryUsed);
+	OnItemSecondaryReleasedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemSecondaryReleased);
 }
 
 // Called when the game starts or when spawned
@@ -36,34 +41,34 @@ void AEquippableItem::OnConstruction(const FTransform& Transform)
 
 void AEquippableItem::OnEquipped()
 {
-	BP_OnEquipped();
-
 	SetActorHiddenInGame(false);
+	
+	BP_OnEquipped();
 }
 
 void AEquippableItem::OnUnEquipped()
 {
-	BP_OnUnEquipped();
-
 	SetActorHiddenInGame(true);
+	
+	BP_OnUnEquipped();
 }
 
 void AEquippableItem::OnPickedUp()
 {
-	BP_OnPickedUp();
-
 	SetActorHiddenInGame(true);
-	SetActorEnableCollision(false);
-	SkeletalMeshComponent->SetSimulatePhysics(false);
+    SetActorEnableCollision(false);
+    SkeletalMeshComponent->SetSimulatePhysics(false);
+	
+	BP_OnPickedUp();
 }
 
 void AEquippableItem::OnDropped()
 {
-	BP_OnDropped();
-
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
-	SkeletalMeshComponent->SetSimulatePhysics(true);
+	SkeletalMeshComponent->SetSimulatePhysics(true);	
+	
+	BP_OnDropped();
 }
 
 bool AEquippableItem::Interact(APlayerCharacter* InteractInstigator)
@@ -75,22 +80,22 @@ bool AEquippableItem::Interact(APlayerCharacter* InteractInstigator)
 
 void AEquippableItem::UseItemPrimary()
 {
-	
+	OnItemPrimaryUsedDelegate.Broadcast();
 }
 
 void AEquippableItem::ReleaseItemPrimary()
 {
-	
+	OnItemPrimaryReleasedDelegate.Broadcast();
 }
 
 void AEquippableItem::UseItemSecondary()
 {
-	
+	OnItemSecondaryUsedDelegate.Broadcast();
 }
 
 void AEquippableItem::ReleaseItemSecondary()
 {
-	
+	OnItemSecondaryReleasedDelegate.Broadcast();
 }
 
 void AEquippableItem::Reload()
