@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RemoteControlTurret.h"
-#include "InteractableObject.h"
+#include "Interactables/InteractableObject.h"
 #include "RemoteTurretSeat.generated.h"
 
 UCLASS()

@@ -5,20 +5,20 @@
 
 UCityResourcesSubsystem::UCityResourcesSubsystem()
 {
-	ResourceInventory.Add(EResourceType::Metal, 40);
-	ResourceInventory.Add(EResourceType::Concrete, 60);
-	ResourceInventory.Add(EResourceType::Oil, 20);
+	ResourceInventory.Add(EResourceType::Metal, 250);
+	ResourceInventory.Add(EResourceType::Concrete, 250);
+	ResourceInventory.Add(EResourceType::Oil, 250);
 	ResourceInventory.Add(EResourceType::AlienMaterial, 0);
-	ResourceInventory.Add(EResourceType::Food, 20);
-	ResourceInventory.Add(EResourceType::Power, 0);
-	ResourceInventory.Add(EResourceType::ResearchPoints, 0);
+	ResourceInventory.Add(EResourceType::Food, 250);
+	ResourceInventory.Add(EResourceType::Power, 250);
+	ResourceInventory.Add(EResourceType::ResearchPoints, 10);
 
-	MaximumResources.Add(EResourceType::Metal, 100);
-	MaximumResources.Add(EResourceType::Concrete, 100);
-	MaximumResources.Add(EResourceType::Oil, 100);
+	MaximumResources.Add(EResourceType::Metal, 250);
+	MaximumResources.Add(EResourceType::Concrete, 250);
+	MaximumResources.Add(EResourceType::Oil, 250);
 	MaximumResources.Add(EResourceType::AlienMaterial, 20);
-	MaximumResources.Add(EResourceType::Food, 100);
-	MaximumResources.Add(EResourceType::Power, 200);
+	MaximumResources.Add(EResourceType::Food, 250);
+	MaximumResources.Add(EResourceType::Power, 250);
 	MaximumResources.Add(EResourceType::ResearchPoints, 10);
 
 	Population.Add(ECitizenType::Worker, 100);
@@ -28,6 +28,8 @@ UCityResourcesSubsystem::UCityResourcesSubsystem()
 void UCityResourcesSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+
+	
 
 	ClampResources();
 }

@@ -14,14 +14,13 @@ class AStrategyGameState;
 class APlayerCharacter;
 class ARTSCamera;
 
-
-
 UENUM(BlueprintType)
 enum class EControllerMode : uint8
 {
 	FirstPerson UMETA(DisplayName="First Person Mode"),
 	RTS			UMETA(DisplayName="RTS Mode"),
 	Turret		UMETA(DisplayName="Turret Mode"),
+	Terminal	UMETA(DisplayName="Terminal Mode")
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FControllerModeChangedDelegate, EControllerMode, NewControllerMode);

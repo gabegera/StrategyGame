@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "BaseStrategyWidget.generated.h"
 
+class UUpgradeDataAsset;
 class AStructure;
 class ASkyscraper;
 class ASkyscraperModule;
@@ -75,10 +76,10 @@ protected:
 	void BP_OnAssignedWorkersChanged();
 
 	UFUNCTION()
-	void OnUpgradeUnlocked(struct FUpgrade UnlockedUpgrade);
+	void OnUpgradeUnlocked(UUpgradeDataAsset* UnlockedUpgrade);
 
 	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnUpgradeUnlocked")
-	void BP_OnUpgradeUnlocked(struct FUpgrade UnlockedUpgrade);
+	void BP_OnUpgradeUnlocked(UUpgradeDataAsset* UnlockedUpgrade);
 
 	UFUNCTION()
 	void OnStructureBuilt(AStructure* BuiltStructure);

@@ -169,7 +169,7 @@ public:
 	EBuildableState GetBuildableState() { return BuildableState; }
 
 	UFUNCTION(BlueprintCallable)
-	EBuildableState SetBuildableState(EBuildableState NewMode) { BuildableStateChangedDelegate.Broadcast(this, NewMode); return BuildableState = NewMode; }
+	EBuildableState SetBuildableState(EBuildableState NewMode);
 
 	UFUNCTION(BlueprintGetter)
 	FIntVector2 GetSnappingOffset() { return SnappingOffset; }

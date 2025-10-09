@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InteractableObject.h"
+#include "Interactables/InteractableObject.h"
 #include "StrategyGameCharacter.h"
 #include "Turrets/RemoteControlTurret.h"
 #include "Camera/CameraComponent.h"

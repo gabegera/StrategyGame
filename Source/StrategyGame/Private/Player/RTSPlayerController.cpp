@@ -72,9 +72,6 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 void ARTSPlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-
-	AddCheats(true);
-	CheatManager->AddCheatManagerExtension(NewObject<UPlayerCharacterCheats>(UPlayerCharacterCheats::StaticClass()));
 }
 
 void ARTSPlayerController::BeginPlay()
@@ -156,6 +153,9 @@ void ARTSPlayerController::Exit()
 		GetRTSCamera()->ExitRTSMode();
 		break;
 	case EControllerMode::Turret:
+		GetPlayerCharacter()->Exit();
+		break;
+	case EControllerMode::Terminal:
 		GetPlayerCharacter()->Exit();
 		break;
 	default:

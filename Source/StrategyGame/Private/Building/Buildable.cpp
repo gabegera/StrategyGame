@@ -48,8 +48,6 @@ void ABuildable::BeginPlay()
 
 	DefaultMaterial = StaticMeshComponent->GetMaterial(0);
 
-	UpdateBuildMaterials();
-
 	if (IsBeingCreated())
 	{
 		BuildingBounds->SetHiddenInGame(false);
@@ -60,6 +58,8 @@ void ABuildable::BeginPlay()
 	BuildingBounds->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOverlapEnd);
 
 	GetStrategyGameState()->OnTimeScaleChanged.AddUniqueDynamic(this, &ThisClass::OnTimeScaleChanged);
+
+	UpdateBuildMaterials();
 }
 
 void ABuildable::OnConstruction(const FTransform& Transform)
@@ -270,6 +270,15 @@ void ABuildable::UpdateBuildMaterials()
 			StaticMesh->SetMaterial(0, CanNotBuildMaterial);
 		}
 	}
+}
+
+EBuildableState ABuildable::SetBuildableState(EBuildableState NewMode)
+{
+	BuildableStateChangedDelegate.Broadcast(this, NewMode);
+	BuildableState = NewMode;
+	UpdateBuildMaterials();
+
+	return BuildableState;
 }
 
 bool ABuildable::IsBuildingPermitted()

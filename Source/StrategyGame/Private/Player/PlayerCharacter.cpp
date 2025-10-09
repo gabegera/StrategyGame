@@ -178,6 +178,10 @@ void APlayerCharacter::Exit()
 	SetActorEnableCollision(true);
 	GetMesh()->SetAnimation(nullptr);
 	FirstPersonCamera->bUsePawnControlRotation = true;
+	GetPlayerController()->SetViewTargetWithBlend(this, 1.0f, VTBlend_EaseInOut, 2);
+	
+	FInputModeGameOnly InputMode;
+	GetPlayerController()->SetInputMode(InputMode);
 }
 
 void APlayerCharacter::ResetFOV()

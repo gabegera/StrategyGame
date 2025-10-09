@@ -63,7 +63,7 @@ void UBaseStrategyWidget::OnAssignedWorkersChanged()
 	BP_OnAssignedWorkersChanged();
 }
 
-void UBaseStrategyWidget::OnUpgradeUnlocked(struct FUpgrade UnlockedUpgrade)
+void UBaseStrategyWidget::OnUpgradeUnlocked(UUpgradeDataAsset* UnlockedUpgrade)
 {
 	BP_OnUpgradeUnlocked(UnlockedUpgrade);
 }
