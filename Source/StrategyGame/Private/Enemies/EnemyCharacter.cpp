@@ -26,7 +26,7 @@ void AEnemyCharacter::Die()
 
 	GetMesh()->SetCollisionProfileName("Ragdoll");
 	GetMesh()->SetSimulatePhysics(true);
-	GetCapsuleComponent()->SetCollisionProfileName("NoCollision");
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 }
 
 // Called every frame

@@ -1,162 +1,201 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Buildable.h"
-#include "Components/LookAtCameraTextRenderComponent.h"
-#include "DataTables/StructureData.h"
-#include "Interfaces/PowerInterface.h"
+#include "CustomActor.h"
+#include "Components/BoxComponent.h"
+#include "ResourceNode.h"
+#include "Interfaces/StructureInterface.h"
 #include "Structure.generated.h"
 
-// Child of ABuildable that has the ability to change resource and population values.
+class ULookAtCameraTextRenderComponent;
+class UArrowComponent;
+
+UENUM(BlueprintType)
+enum class EStructureState : uint8
+{
+	BeingPlaced				UMETA(DisplayName="Being Placed"),
+	UnderConstruction		UMETA(DisplayName="Under Construction"),
+	ConstructionComplete	UMETA(DisplayName="Construction Complete"),
+};
+
+UENUM(BlueprintType, DisplayName="Structure Category")
+enum class EStructureCategory : uint8
+{
+	Miscellaneous			= 0		UMETA(DisplayName="Miscellaneous"),	
+	Housing					= 1		UMETA(DisplayName="Housing"),
+	ResourceGeneration		= 2		UMETA(DisplayName="Resource Generation"),
+	Storage					= 3		UMETA(DisplayName="Storage"),
+	Defenses				= 4		UMETA(DisplayName="Defenses"),
+};
+
+// The base class for any actor that can be built in RTS Mode.
 UCLASS()
-class STRATEGYGAME_API AStructure : public ABuildable, public IPowerInterface
+class STRATEGYGAME_API AStructure : public ACustomActor, public IStructureInterface
 {
 	GENERATED_BODY()
-
-public:
+	
+public:	
 	// Sets default values for this actor's properties
 	AStructure();
 
 protected:
 
+	// ------ COMPONENTS ------
+
+	UPROPERTY()
+	USceneComponent* SceneComponent;
+	
+	UPROPERTY(BlueprintGetter=GetStaticMeshComponent, Category="Structure|Components")
+	UStaticMeshComponent* StaticMeshComponent;
+	
+	UPROPERTY(BlueprintReadWrite, Category="Structure|Components")
+	UBoxComponent* BuildingBounds;
+
 	UPROPERTY(EditAnywhere)
-	ULookAtCameraTextRenderComponent* StructureText;
+	ULookAtCameraTextRenderComponent* LookAtCameraTextRenderComponent;
 
-	UPROPERTY() FTimerHandle ResourceGenerationTimer;
-	UPROPERTY() FTimerHandle ResourceConsumptionTimer;
-	UPROPERTY() FTimerHandle ResourceDrainingTimer;
+	// ------ Structure INFO ------
 
-	// ------ STRUCTURE DATA ------
+	UPROPERTY(EditAnywhere, BlueprintGetter=GetStructureName, Category="Structure")
+	FText StructureName;
 
-	UPROPERTY(EditDefaultsOnly, Category="Structure Data")
-	FDataTableRowHandle StructureDataTableRow;
+	UPROPERTY(EditAnywhere, BlueprintGetter=GetStructureCategory, Category="Structure")
+	EStructureCategory StructureCategory = EStructureCategory::Miscellaneous;
+
+	UPROPERTY(EditAnywhere, Category="Structure")
+	TSet<TSoftObjectPtr<UStaticMesh>> MeshVariety;
+
+	// Use the setter function if changing this variable, that way the delegate gets broadcast.
+	UPROPERTY()
+	EStructureState StructureState = EStructureState::ConstructionComplete;
 	
 	UPROPERTY()
-	TMap<ECitizenType, int32> AssignedWorkers;
+	TArray<AActor*> OverlappingExclusionZones;
+
+	// ------ CONSTRUCTION ------
+
+	UPROPERTY()
+	FTimerHandle ConstructionTimer;
+
+	// How long it takes for the structure to be built.
+	UPROPERTY(EditDefaultsOnly, Category="Structure|Construction")
+	float TimeToCompleteConstruction = 3.0f;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Structure|Construction")
+	TMap<UResourceDataAsset*, int32> ConstructionCost;
+
+	// The Offset to add to the snapping grid.
+	UPROPERTY()
+	FIntVector2 SnappingOffset = FIntVector2(0, 0);
+
+	UPROPERTY()
+	UMaterialInterface* DefaultMaterial;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure|Construction|Materials")
+	UMaterialInstance* CanBuildMaterial;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure|Construction|Materials")
+	UMaterialInstance* CanNotBuildMaterial;
+
+	UPROPERTY(EditDefaultsOnly, Category="Structure|Construction|Materials")
+	UMaterialInstance* IsBuildingMaterial;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
+
+	void ConsumeConstructionResources();
 	
-	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
-	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
+	void RefundConstructionMaterials();
+	
+	virtual void CompleteConstruction();
+
+	// Changes the mesh material depending on if the structure is being placed, is being constructed, or is unable to be built.
+	virtual void UpdateBuildMaterials();
+
+	// Randomly picks a mesh from the MeshVariety set and loads it asynchronously before setting it as the current mesh.
+	void LoadRandomMesh() const;
+
+	void OnMeshLoaded(const TSoftObjectPtr<UStaticMesh> LoadedMesh) const;
+
+	UFUNCTION()
+	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+	UFUNCTION()
+	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	UFUNCTION()
+	virtual void OnStructureStateChanged(AStructure* Structure, EStructureState NewStructureState);
 
 public:
 
-	// ------ INTERFACE FUNCTIONS ------
-	
-	virtual bool Select_Implementation(ARTSCamera* SelectInstigator) override;
+	virtual bool TrySelect(ARTSCamera* SelectInstigator) override;
+
+	virtual bool TryRecycle(ARTSCamera* DestroyInstigator) override;
 
 	UFUNCTION(BlueprintCallable)
-	void ActivateStructureEffects();
-
-	UFUNCTION(BlueprintCallable)
-	AResourceNode* FindClosestResourceNode();
-
-	UFUNCTION(BlueprintCallable, DisplayName="BeginConstruction")
-	void BP_BeginConstruction() { BeginConstruction(); }
-	
-	virtual void BeginConstruction() override;
-	virtual void CompleteConstruction() override;
-	
-	virtual void Recycle() override;
-
-	// If the structure increases storage capacity, this function will revert that.
-	// Used for when the structure is destroyed.
-	void RevertStorageCapacity();
-
-	UFUNCTION(BlueprintCallable)
-	void BeginGeneratingResources();
-	void GenerateResources();
-
-	UFUNCTION(BlueprintCallable)
-	void BeginConsumingResources();
-	void ConsumeResources();
+	virtual void MoveBuilding(FVector NewLocation);
 	
 	UFUNCTION(BlueprintCallable)
-	void BeginDrainingResourceFromNode();
-	void DrainResourceFromNode();
+	virtual void PlaceBuilding();
 	
+	// Function to be called when the building is placed.
 	UFUNCTION(BlueprintCallable)
-	void AssignWorkers(ECitizenType WorkerType, int32 Amount);
-	UFUNCTION(BlueprintCallable)
-	void AddMaxWorkers(ECitizenType WorkerType);
-
-	UFUNCTION(BlueprintCallable)
-	void RemoveWorkers(ECitizenType WorkerType, int32 Amount);
-	UFUNCTION(BlueprintCallable)
-	void RemoveAllWorkers(ECitizenType WorkerType);
-
-	virtual void UpdateBuildMaterials() override;
+	virtual void BeginConstruction();
 	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+	// If the structure is being built, cancels it and gets the materials back.
+	UFUNCTION(BlueprintCallable)
+	virtual void CancelConstruction();
 	
+	// Begins recycling the structure to destroy it and get its materials back.
+	UFUNCTION(BlueprintCallable)
+	virtual void Recycle();
+
 	// ------ GETTERS ------
 
-	virtual bool IsBuildingPermitted() override;
-	
-    UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="IsBuildingPermitted")
-    bool BP_IsBuildingPermitted() { return IsBuildingPermitted(); }
-	
-	const FStructureData* GetStructureData();
-	
-	UFUNCTION(BlueprintCallable, BlueprintPure, DisplayName="GetStructureData")
-	FStructureData BP_GetStructureData() { return *GetStructureData();}
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Structure")
+	FText GetStructureName() { return StructureName; }
+
+	UFUNCTION(BlueprintPure, Category="Structure")
+	EStructureCategory GetStructureCategory() const { return StructureCategory; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool GetGeneratesResources() { return GetStructureData()->bGeneratesResources; }
+	UStaticMeshComponent* GetStaticMeshComponent() { return StaticMeshComponent; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool GetConsumesResources() { return GetStructureData()->bConsumesResources; }
+	EStructureState GetStructureState() { return StructureState; }
+
+	UFUNCTION(BlueprintCallable)
+	EStructureState SetStructureState(EStructureState NewMode);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool GetConsumesResourcesFromNearbyNode() { return GetStructureData()->bConsumesResourceFromNearbyNode; }
+	FIntVector2 GetSnappingOffset() { return SnappingOffset; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool GetIncreasesStorageCapacity() { return GetStructureData()->bIncreasesStorageCapacity; }
+	bool IsBeingPlaced() const { return StructureState == EStructureState::BeingPlaced; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TMap<EResourceType, float> GetResourcesToGeneratePerSecond() { return GetStructureData()->ResourcesToGeneratePerSecond; }
+	bool IsUnderConstruction() const { return StructureState == EStructureState::UnderConstruction; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TMap<EResourceType, float> GetResourcesToConsumePerSecond() { return GetStructureData()->ResourcesToConsumePerSecond; }
+	bool IsConstructionComplete() const { return StructureState == EStructureState::ConstructionComplete; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TMap<EResourceType, int32> GetResourcesToIncreaseStorage() { return GetStructureData()->ResourcesToIncreaseStorage; }
+	bool IsOverlappingBuildExclusionZone() { return !OverlappingExclusionZones.IsEmpty(); }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	bool DoesIncreasePopulationCapacity() { return GetStructureData()->AdditionalPopulationCapacity > 0; }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	virtual bool IsBuildingPermitted();
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Population")
-	int32 GetAdditionalPopulationCapacity() { return GetStructureData()->AdditionalPopulationCapacity; }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TArray<AActor*> GetOverlappingBuildExclusionZones() { return OverlappingExclusionZones; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	bool GetAllowWorkerEmployment() { return GetStructureData()->bAllowWorkerEmployment; }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool HaveEnoughResourcesToBuild();
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	bool GetAllowScientistEmployment() { return GetStructureData()->bAllowScientistEmployment; }
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	TMap<UResourceDataAsset*, int32> GetConstructionResourceCost() { return ConstructionCost; }
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	int32 GetWorkerCount(ECitizenType WorkerType) { return AssignedWorkers.FindRef(WorkerType); }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	int32 GetMaxWorkerCapacity() { return GetStructureData()->MaxWorkerCapacity; }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	int32 GetTotalWorkers() { return GetWorkerCount(ECitizenType::Worker) + GetWorkerCount(ECitizenType::Scientist); }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	int32 GetAvailableWorkersSlots() { return GetMaxWorkerCapacity() - GetTotalWorkers(); }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	bool IsWorkerCapacityFull() { return GetAvailableWorkersSlots() <= 0; }
-
-	// Returns a value between 0 and 1 based on how many workers are assigned to the structure.
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Workers")
-	float GetWorkerEfficiency() { if (!GetAllowWorkerEmployment() && !GetAllowScientistEmployment()) return 1; return static_cast<float>(GetTotalWorkers()) / GetMaxWorkerCapacity(); }
 };

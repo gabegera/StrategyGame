@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "CityTimeSubsystem.h"
+#include "TimeSubsystem.h"
 #include "GameFramework/SaveGame.h"
 #include "RTSSaveGame.generated.h"
 

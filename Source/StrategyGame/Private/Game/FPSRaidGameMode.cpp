@@ -10,9 +10,6 @@
 AFPSRaidGameMode::AFPSRaidGameMode()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
-	OnObjectiveUpdatedDelegate.AddUniqueDynamic(this, &ThisClass::OnObjectiveUpdated);
-	OnAllObjectivesCompletedDelegate.AddUniqueDynamic(this, &ThisClass::OnAllObjectivesCompleted);
 }
 
 void AFPSRaidGameMode::BeginPlay()
@@ -21,6 +18,9 @@ void AFPSRaidGameMode::BeginPlay()
 
 	TArray<AActor*> EnemyCharacters;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyCharacter::StaticClass(), EnemyCharacters);
+
+	OnObjectiveUpdatedDelegate.AddUniqueDynamic(this, &ThisClass::OnObjectiveUpdated);
+	OnAllObjectivesCompletedDelegate.AddUniqueDynamic(this, &ThisClass::OnAllObjectivesCompleted);	
 
 	for (AActor* Enemy : EnemyCharacters)
 	{
@@ -70,7 +70,7 @@ void AFPSRaidGameMode::OnDestructibleDestroyed(TSubclassOf<ADestructible> Destro
 
 void AFPSRaidGameMode::OnObjectiveUpdated()
 {
-	BP_OnObjectiveUpdated();
+	ReactToObjectiveUpdated();
 	
 	if (IsAllObjectivesComplete())
 	{
@@ -80,7 +80,7 @@ void AFPSRaidGameMode::OnObjectiveUpdated()
 
 void AFPSRaidGameMode::OnAllObjectivesCompleted()
 {
-	BP_OnAllObjectivesCompleted();
+	ReactToAllObjectivesCompleted();
 }
 
 void AFPSRaidGameMode::AddObjective(FObjective NewObjective)

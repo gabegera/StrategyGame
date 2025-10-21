@@ -3,28 +3,65 @@
 
 #include "Game/UpgradesSubsystem.h"
 
-#include "UpgradeDataAsset.h"
+#include "DataAssets/UpgradeDataAsset.h"
+#include "Building/Structure.h"
 
-void UUpgradesSubsystem::UnlockUpgrade(UUpgradeDataAsset* Upgrade)
+bool UUpgradesSubsystem::UnlockUpgrade(UUpgradeDataAsset* InUpgrade)
 {
-	UnlockedUpgrades.Add(Upgrade);
+	if (IsUpgradeUnlocked(InUpgrade)) return false;
+	if (!ArePreRequisitesUnlocked(InUpgrade)) return false;
 	
-	OnUpgradeUnlocked.Broadcast(Upgrade);
+	UnlockedUpgrades.Add(InUpgrade);
+
+	if (InUpgrade->GetUpgradeType() == EUpgradeType::UnlockStructure)
+	{
+		UnlockStructure(InUpgrade->GetTargetStructure().LoadSynchronous());
+	}
+	
+	OnUpgradeUnlocked.Broadcast(InUpgrade);
+
+	return true;
 }
 
-TSet<TSoftObjectPtr<UUpgradeDataAsset>>& UUpgradesSubsystem::GetUnlockedUpgrades()
+void UUpgradesSubsystem::UnlockStructure(const TSubclassOf<AStructure> InStructure)
+{
+	UnlockedStructures.Add(InStructure);
+	OnStructureUnlocked.Broadcast(InStructure);
+}
+
+TSet<UUpgradeDataAsset*>& UUpgradesSubsystem::GetUnlockedUpgrades()
 {
 	return UnlockedUpgrades;
 }
 
-bool UUpgradesSubsystem::IsUpgradeUnlocked(const TSoftObjectPtr<UUpgradeDataAsset> InUpgrade)
+TSet<TSubclassOf<AStructure>>& UUpgradesSubsystem::GetUnlockedStructures()
+{
+	return UnlockedStructures;
+}
+
+TSet<TSubclassOf<AStructure>> UUpgradesSubsystem::GetUnlockedStructuresOfCategory(EStructureCategory StructureCategory)
+{
+	TSet<TSubclassOf<AStructure>> OutSet;
+
+	for (TSubclassOf Structure : UnlockedStructures)
+	{
+		if (Structure.GetDefaultObject()->GetStructureCategory() == StructureCategory)
+		{
+			OutSet.Add(Structure);
+		}
+	}
+
+	return OutSet;
+}
+
+bool UUpgradesSubsystem::IsUpgradeUnlocked(const UUpgradeDataAsset* InUpgrade)
 {
 	return UnlockedUpgrades.Contains(InUpgrade);
 }
 
-bool UUpgradesSubsystem::ArePreRequisitesUnlocked(const TSoftObjectPtr<UUpgradeDataAsset> InUpgrade)
+bool UUpgradesSubsystem::ArePreRequisitesUnlocked(UUpgradeDataAsset* InUpgrade)
 {
-	for (auto RequiredUpgrade : InUpgrade.LoadSynchronous()->GetPreRequisites())
+	for (const UUpgradeDataAsset* RequiredUpgrade : InUpgrade->GetPreRequisites())
 	{
 		if (!IsUpgradeUnlocked(RequiredUpgrade))
 		{

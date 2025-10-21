@@ -36,6 +36,8 @@ void APlayerCharacter::BeginPlay()
 	CrouchHeight = GetCharacterMovement()->GetCrouchedHalfHeight();
 	
 	GetWorldTimerManager().SetTimer(InteractionTimer, this, &APlayerCharacter::CheckForInteractable, 1.0f / InteractionChecksPerSecond, true);
+
+	RTSPlayerController = Cast<ARTSPlayerController>(GetController());
 }
 
 void APlayerCharacter::Move(FVector2D MoveInput)
@@ -125,9 +127,10 @@ void APlayerCharacter::TriggerInteraction()
 {
 	if (!TargetInteractable) return;
 
+	// If the target interactable is being carried by the player, return.
 	if (CharacterInventoryComponent->GetCarriedEquipment().Contains(Cast<AEquippableItem>(TargetInteractable))) return;
 	
-	Cast<IInteractionInterface>(TargetInteractable)->Interact(this);
+	Cast<IInteractionInterface>(TargetInteractable)->TryInteract(this);
 }
 
 void APlayerCharacter::CheckForInteractable()
@@ -160,7 +163,7 @@ void APlayerCharacter::SwitchToRTSCam(ARTSCamera* TargetCamera)
 {
 	if (!TargetCamera) return;
 	
-	GetPlayerController()->Possess(TargetCamera);
+	GetController()->Possess(TargetCamera);
 }
 
 void APlayerCharacter::EnterSeat(AActor* Seat)
@@ -199,15 +202,5 @@ void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
-
-ARTSPlayerController* APlayerCharacter::GetPlayerController()
-{
-	if (RTSPlayerController == nullptr)
-	{
-		RTSPlayerController = Cast<ARTSPlayerController>(GetController());
-	}
-
-	return RTSPlayerController;
 }
 

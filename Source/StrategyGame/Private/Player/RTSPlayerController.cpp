@@ -5,6 +5,7 @@
 
 #include "PlayerCharacterCheats.h"
 #include "EquippableItems/EquippableItem.h"
+#include "Game/TimeSubsystem.h"
 #include "GameFramework/CheatManager.h"
 #include "Player/PlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
@@ -55,9 +56,9 @@ void ARTSPlayerController::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(Input_RTS_Cancel, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Cancel);
 	Input->BindAction(Input_RTS_RotateBuilding, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_RotateBuilding);
 	Input->BindAction(Input_RTS_EquipRecycleTool, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_EquipRecycleTool);
-	Input->BindAction(Input_RTS_1xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set1xSpeed);
-	Input->BindAction(Input_RTS_2xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set2xSpeed);
-	Input->BindAction(Input_RTS_3xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set3xSpeed);
+	Input->BindAction(Input_RTS_1xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set1XSpeed);
+	Input->BindAction(Input_RTS_2xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set2XSpeed);
+	Input->BindAction(Input_RTS_3xSpeed, ETriggerEvent::Triggered, this, &ARTSPlayerController::RTS_Set3XSpeed);
 
 	// TURRET INPUT
 	Input->BindAction(Input_Turret_Look, ETriggerEvent::Triggered, this, &ARTSPlayerController::Turret_Look);
@@ -79,21 +80,21 @@ void ARTSPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	if (ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player))
-    {
-    	if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
-    	{
-    		InputSystem->ClearAllMappings();
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		{
+			InputSystem->ClearAllMappings();
 
-    		InputSystem->AddMappingContext(PlayerInputMapping.LoadSynchronous(), 0);
-    	}
+			InputSystem->AddMappingContext(PlayerInputMapping.LoadSynchronous(), 0);
+		}
 
-    	SetupPlayerInputComponent(InputComponent);
-    }
+		SetupPlayerInputComponent(InputComponent);
+	}
+
+	PlayerCharacter = Cast<APlayerCharacter>(GetPawn());
+	RTSCamera = Cast<ARTSCamera>(UGameplayStatics::GetActorOfClass(this, ARTSCamera::StaticClass()));
 
 	OnControllerModeChangedDelegate.AddUniqueDynamic(this, &ThisClass::OnControllerModeChanged);
-	OnGamePausedDelegate.AddUniqueDynamic(this, &ThisClass::OnGamePaused);
-	OnGameUnPausedDelegate.AddUniqueDynamic(this, &ThisClass::OnGameUnPaused);
-	GetStrategyGameState()->OnTimeScaleChanged.AddUniqueDynamic(this, &ThisClass::OnTimeScaleChanged);
 }
 
 void ARTSPlayerController::OnPossess(APawn* InPawn)
@@ -102,32 +103,12 @@ void ARTSPlayerController::OnPossess(APawn* InPawn)
 
 	if (InPawn->IsA(ARTSCamera::StaticClass()))
 	{
-		GetRTSCamera(); // Used to assign object pointer.
 		SetControllerMode(EControllerMode::RTS);
 	}
 	else if (InPawn->IsA(APlayerCharacter::StaticClass()))
 	{
-		GetPlayerCharacter(); // Used to assign object pointer.
 		SetControllerMode(EControllerMode::FirstPerson);
 	}
-}
-
-void ARTSPlayerController::OnTimeScaleChanged(const ETimeScale NewTimeScale)
-{
-	switch (NewTimeScale)
-	{
-	case ETimeScale::OneTimesSpeed:
-		CustomTimeDilation = 1.0f;
-		break;
-	case ETimeScale::TwoTimesSpeed:
-		CustomTimeDilation = 1.0f / 2.0f;
-		break;
-	case ETimeScale::ThreeTimesSpeed:
-		CustomTimeDilation = 1.0f / 3.0f;
-		break;
-	}
-	
-	BP_OnTimeScaleChanged(NewTimeScale);
 }
 
 void ARTSPlayerController::OnControllerModeChanged(EControllerMode NewControllerMode)
@@ -162,12 +143,10 @@ void ARTSPlayerController::Exit()
 		if (IsPaused())
 		{
 			SetPause(false);
-			OnGameUnPausedDelegate.Broadcast();
 		}
 		else
 		{
 			SetPause(true);
-			OnGamePausedDelegate.Broadcast();
 		}
 		break;
 	}
@@ -443,7 +422,7 @@ void ARTSPlayerController::RTS_RotateBuilding()
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 
-	GetRTSCamera()->RotateBuilding();
+	GetRTSCamera()->RotateStructure();
 }
 
 void ARTSPlayerController::RTS_EquipRecycleTool()
@@ -453,25 +432,25 @@ void ARTSPlayerController::RTS_EquipRecycleTool()
 	GetRTSCamera()->EquipRecycleTool();
 }
 
-void ARTSPlayerController::RTS_Set1xSpeed()
+void ARTSPlayerController::RTS_Set1XSpeed()
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 
-	GetStrategyGameState()->SetTimeScale(ETimeScale::OneTimesSpeed);
+	GetGameInstance()->GetSubsystem<UTimeSubsystem>()->SetTimeScaleMultiplier(1.0f);
 }
 
-void ARTSPlayerController::RTS_Set2xSpeed()
+void ARTSPlayerController::RTS_Set2XSpeed()
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 
-	GetStrategyGameState()->SetTimeScale(ETimeScale::TwoTimesSpeed);
+	GetGameInstance()->GetSubsystem<UTimeSubsystem>()->SetTimeScaleMultiplier(2.0f);
 }
 
-void ARTSPlayerController::RTS_Set3xSpeed()
+void ARTSPlayerController::RTS_Set3XSpeed()
 {
 	if (ControllerMode != EControllerMode::RTS) return;
 
-	GetStrategyGameState()->SetTimeScale(ETimeScale::ThreeTimesSpeed);
+	GetGameInstance()->GetSubsystem<UTimeSubsystem>()->SetTimeScaleMultiplier(3.0f);
 }
 
 void ARTSPlayerController::Turret_Look(const FInputActionInstance& Instance)
@@ -508,46 +487,6 @@ void ARTSPlayerController::Turret_StopAiming()
 void ARTSPlayerController::Turret_Reload()
 {
 	if (ControllerMode != EControllerMode::Turret) return;
-}
-
-AStrategyGameState* ARTSPlayerController::GetStrategyGameState()
-{
-	if (StrategyGameState == nullptr)
-	{
-		StrategyGameState = Cast<AStrategyGameState>(GetWorld()->GetGameState());
-	}
-
-	return StrategyGameState;
-}
-
-AStrategyGameModeBase* ARTSPlayerController::GetStrategyGameMode()
-{
-	if (StrategyGameMode == nullptr)
-	{
-		StrategyGameMode = Cast<AStrategyGameModeBase>(GetWorld()->GetAuthGameMode());
-	}
-
-	return StrategyGameMode;
-}
-
-APlayerCharacter* ARTSPlayerController::GetPlayerCharacter()
-{
-	if (PlayerCharacter == nullptr)
-	{
-		PlayerCharacter = Cast<APlayerCharacter>(GetCharacter());
-	}
-
-	return PlayerCharacter;
-}
-
-ARTSCamera* ARTSPlayerController::GetRTSCamera()
-{
-	if (RTSCamera == nullptr)
-	{
-		RTSCamera = Cast<ARTSCamera>(GetPawn());
-	}
-
-	return RTSCamera;
 }
 
 void ARTSPlayerController::SetControllerMode(EControllerMode NewMode)

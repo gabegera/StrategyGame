@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Game/StrategyGameModeBase.h"
+#include "Game/CityDefenseGameMode.h"
 #include "Game/StrategyGameState.h"
 #include "CustomActor.generated.h"
 
@@ -19,17 +19,7 @@ public:
 
 protected:
 
-	UPROPERTY()
-	AStrategyGameState* StrategyGameState = nullptr;
-	
-	UPROPERTY()
-	AStrategyGameModeBase* StrategyGameMode = nullptr;
+	virtual void BeginPlay() override;
 
 public:
-	
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	AStrategyGameState* GetStrategyGameState();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	AStrategyGameModeBase* GetStrategyGameMode();
 };

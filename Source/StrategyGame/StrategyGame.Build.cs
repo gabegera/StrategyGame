@@ -8,9 +8,9 @@ public class StrategyGame : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "SlateCore", "UMG" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "AIModule", "GameplayTasks", "NavigationSystem" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayDebugger" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayDebugger", "Slate", "SlateCore"});
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

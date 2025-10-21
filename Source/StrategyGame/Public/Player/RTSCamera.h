@@ -3,17 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Building/Buildable.h"
+#include "Building/Structure.h"
 #include "Camera/CameraComponent.h"
 #include "Player/RTSPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Game/StrategyGameModeBase.h"
-#include "Interfaces/BuildingInterface.h"
+#include "Interfaces/StructureInterface.h"
 #include "RTSCamera.generated.h"
 
-class ARoad;
-class AStrategyGameModeBase;
+class ACityDefenseGameMode;
 class AStrategyGameState;
 class APlayerCharacter;
 
@@ -24,11 +22,8 @@ enum ERTSTool
 	RecycleTool			UMETA(DisplayName="Destroy Tool"),
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildableSelectedDelegate, ABuildable*, SelectedBuildable);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBuildableDeSelectedDelegate);
-
 UCLASS()
-class STRATEGYGAME_API ARTSCamera : public APawn, public IBuildingInterface
+class STRATEGYGAME_API ARTSCamera : public APawn, public IStructureInterface
 {
 	GENERATED_BODY()
 
@@ -39,8 +34,6 @@ public:
 protected:
 
 	UPROPERTY() ARTSPlayerController* RTSPlayerController = nullptr;
-	UPROPERTY() AStrategyGameState* StrategyGameState = nullptr;
-	UPROPERTY() AStrategyGameModeBase* StrategyGameMode = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* SceneComponent = nullptr;
@@ -87,26 +80,23 @@ protected:
 
 	// ------ TOOLS ------
 
-	ERTSTool CurrentRTSTool = ERTSTool::SelectTool;
+	ERTSTool CurrentRTSTool = SelectTool;
 
 	// ------ STRUCTURE BUILDING ------
 	
-	// The buildable that has been selected to be constructed.
-	UPROPERTY() ABuildable* BuildableBlueprint = nullptr;
-
-	// The Structure that has been clicked on / selected.
-	UPROPERTY() ABuildable* SelectedBuildable = nullptr;
+	UPROPERTY()
+	AStructure* SelectedStructure = nullptr;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UFUNCTION()
+	virtual void OnStructureSelected(AStructure* InSelectedStructure);
+
+	UFUNCTION()
+	virtual void OnStructureDeSelected();
+
 public:
-
-	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FBuildableSelectedDelegate OnBuildableSelected;
-
-	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FBuildableDeSelectedDelegate OnBuildableDeSelected;
 	
 	void Move(FVector2D MoveInput);
 	
@@ -116,6 +106,7 @@ public:
 	void UpdateCameraPitch();
 	
 	void Zoom(float Input);
+	
 	void UpdateZoom();
 
 	// Interacts with the target at the mouse cursor.
@@ -125,9 +116,9 @@ public:
 	
 	void CancelAction();
 	
-	void PlaceBlueprint();
+	void PlaceStructure();
 
-	void RotateBuilding();
+	void RotateStructure();
 
 	void EquipRecycleTool();
 	
@@ -138,22 +129,16 @@ public:
 	FHitResult LineTraceToMousePos(ECollisionChannel CollisionChannel = ECC_Visibility);
 
 	UFUNCTION(BlueprintCallable)
-	void SelectBuildableBlueprint(TSubclassOf<ABuildable> NewBlueprint);
+	void SelectStructure(TSubclassOf<AStructure> NewStructure);
 
 	UFUNCTION(BlueprintCallable)
-	void MoveBlueprintToMousePos();
-
-	UFUNCTION()
-	void OnTimeScaleChanged(const ETimeScale NewTimeScale);
-
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnTimeScaleChanged")
-	void BP_OnTimeScaleChanged(const ETimeScale NewTimeScale);
+	void MoveStructureToMousePos();
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable)
-	ABuildable* SetSelectedBuildable(ABuildable* NewSelectedBuildable) { return SelectedBuildable = NewSelectedBuildable; }
+	AStructure* SetSelectedStructure(AStructure* NewSelectedStructure) { return SelectedStructure = NewSelectedStructure; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FVector SnapVectorToGrid(FVector InputPos, int32 GridSize);
@@ -164,19 +149,7 @@ public:
 	ARTSPlayerController* GetPlayerController();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	AStrategyGameState* GetStrategyGameState();
-
-	UFUNCTION(BlueprintGetter)
-	AStrategyGameModeBase* GetStrategyGameMode();
-
-	UFUNCTION(BlueprintGetter)
-	int32 GetSnappingSize() { return GetStrategyGameMode()->GetSnappingSize(); }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ABuildable* GetSelectedBuildable() { return SelectedBuildable; }
-	
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ABuildable* GetBuildableBlueprint() { return BuildableBlueprint; }
+	AStructure* GetSelectedStructure() { return SelectedStructure; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetMinZoomHeight() { return ZoomDistanceMin; }

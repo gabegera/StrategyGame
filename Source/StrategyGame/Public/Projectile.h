@@ -21,13 +21,13 @@ public:
 protected:
 
 	UPROPERTY(EditAnywhere)
-	UStaticMeshComponent* Mesh;
+	UStaticMeshComponent* StaticMeshComponent;
 
 	UPROPERTY(EditAnywhere)
-	USphereComponent* Sphere;
+	USphereComponent* SphereCollisionComponent;
 
 	UPROPERTY(EditAnywhere)
-	UProjectileMovementComponent* ProjectileMovement;
+	UProjectileMovementComponent* ProjectileMovementComponent;
 
 	UPROPERTY()
 	float Damage;
@@ -61,18 +61,18 @@ public:
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UStaticMeshComponent* GetMesh() const { return Mesh; }
+	UStaticMeshComponent* GetMesh() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
+	UProjectileMovementComponent* GetProjectileMovement() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	USphereComponent* GetSphere() const { return Sphere; }
+	USphereComponent* GetSphere() const;
 
 	// ------ SETTERS ------
 
 	void AddActorToIgnore(AActor* Actor) { ActorsToIgnore.Add(Actor); }
-	void AppendActorsToIgnore(TArray<AActor*> Actors) { ActorsToIgnore.Append(Actors); }
+	void AppendActorsToIgnore(const TArray<AActor*>& Actors) { ActorsToIgnore.Append(Actors); }
 
 	UFUNCTION(BlueprintCallable)
 	void SetSpawner(AActor* NewSpawner) { Spawner = NewSpawner; }

@@ -7,6 +7,7 @@
 #include "CustomActor.h"
 #include "BuildExclusionZone.generated.h"
 
+// A trigger zone used to block building in the area.
 UCLASS()
 class STRATEGYGAME_API ABuildExclusionZone : public ACustomActor
 {

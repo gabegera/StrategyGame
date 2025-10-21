@@ -9,8 +9,6 @@
 #include "GameFramework/PlayerController.h"
 #include "RTSPlayerController.generated.h"
 
-class AStrategyGameModeBase;
-class AStrategyGameState;
 class APlayerCharacter;
 class ARTSCamera;
 
@@ -24,8 +22,6 @@ enum class EControllerMode : uint8
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FControllerModeChangedDelegate, EControllerMode, NewControllerMode);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGamePausedDelegate);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameUnPausedDelegate);
 
 UCLASS()
 class STRATEGYGAME_API ARTSPlayerController : public APlayerController
@@ -33,26 +29,14 @@ class STRATEGYGAME_API ARTSPlayerController : public APlayerController
 	GENERATED_BODY()
 
 protected:
-
-	// WARNING: Do not call this directly, Call GetStrategyGameState();
+	
 	UPROPERTY()
-	AStrategyGameState* StrategyGameState = nullptr;
-
-	// WARNING: Do not call this directly, Call GetStrategyGameModeBase();
+	APlayerCharacter* PlayerCharacter;
+	
 	UPROPERTY()
-	AStrategyGameModeBase* StrategyGameMode = nullptr;
-
-	// WARNING: Do not call this directly, Call GetPlayerCharacter();
-	UPROPERTY()
-	APlayerCharacter* PlayerCharacter = nullptr;
-
-	// WARNING: Do not call this directly, Call GetRTSCamera();
-	UPROPERTY()
-	ARTSCamera* RTSCamera = nullptr;
+	ARTSCamera* RTSCamera;
 
 	EControllerMode ControllerMode = EControllerMode::FirstPerson;
-
-	bool IsHoveringOverUI = false;
 
 	// ------ INPUT ------
 	
@@ -112,9 +96,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	float RTS_RotateSensitivity = 1.0f;
 
-	UPROPERTY() FVector2D MovementInput = FVector2D::ZeroVector;
-	UPROPERTY() bool bIsPanBeingHeld = false;
-	UPROPERTY() bool bIsMouseRotateBeingHeld = false;
+	UPROPERTY()
+	FVector2D MovementInput = FVector2D::ZeroVector;
+	
+	UPROPERTY()
+	bool bIsPanBeingHeld = false;
+	
+	UPROPERTY()
+	bool bIsMouseRotateBeingHeld = false;
 
 	UFUNCTION(BlueprintCallable, Category="Input")
 	void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent);
@@ -124,12 +113,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void OnPossess(APawn* InPawn) override;
-
-	UFUNCTION()
-	void OnTimeScaleChanged(const ETimeScale NewTimeScale);
-
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnTimeScaleChanged")
-	void BP_OnTimeScaleChanged(const ETimeScale NewTimeScale);
 
 	UFUNCTION()
 	void OnControllerModeChanged(EControllerMode NewControllerMode);
@@ -153,12 +136,6 @@ public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 	FControllerModeChangedDelegate OnControllerModeChangedDelegate;
-
-	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FGamePausedDelegate OnGamePausedDelegate;
-
-	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FGameUnPausedDelegate OnGameUnPausedDelegate;
 
 	// Exits Turrets and RTS Mode, if the player isn't in either of those modes then it pauses the game.
 	void Exit();	
@@ -231,11 +208,11 @@ public:
 	
 	void RTS_EquipRecycleTool();
 
-	void RTS_Set1xSpeed();
+	void RTS_Set1XSpeed();
 	
-	void RTS_Set2xSpeed();
+	void RTS_Set2XSpeed();
 	
-	void RTS_Set3xSpeed();
+	void RTS_Set3XSpeed();
 
 	// ------ TURRET FUNCTIONS ------
 
@@ -252,16 +229,10 @@ public:
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
-	AStrategyGameState* GetStrategyGameState();
+	APlayerCharacter* GetPlayerCharacter() { return PlayerCharacter; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
-	AStrategyGameModeBase* GetStrategyGameMode();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
-	APlayerCharacter* GetPlayerCharacter();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Getters")
-	ARTSCamera* GetRTSCamera();
+	ARTSCamera* GetRTSCamera() { return RTSCamera; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Getters")
 	EControllerMode GetControllerMode() { return ControllerMode; }

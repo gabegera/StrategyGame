@@ -13,17 +13,17 @@ AProjectile::AProjectile()
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(RootComponent);
-	Mesh->SetCollisionProfileName("NoCollision");
+	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	StaticMeshComponent->SetupAttachment(RootComponent);
+	StaticMeshComponent->SetCollisionProfileName("NoCollision");
 
-	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
-	Sphere->SetupAttachment(Mesh);
-	Mesh->SetCollisionProfileName("NoCollision");
+	SphereCollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
+	SphereCollisionComponent->SetupAttachment(StaticMeshComponent);
+	StaticMeshComponent->SetCollisionProfileName("NoCollision");
 
-	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-	ProjectileMovement->ProjectileGravityScale = 0;
-	ProjectileMovement->bRotationFollowsVelocity = true;
+	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Movement"));
+	ProjectileMovementComponent->ProjectileGravityScale = 0;
+	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 
 	InitialLifeSpan = 5.0f;
 }
@@ -39,7 +39,7 @@ void AProjectile::CheckCollision()
 	if (PreviousLocation == FVector::ZeroVector) PreviousLocation = GetActorLocation();
 
 	FHitResult Hit;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), PreviousLocation, GetActorLocation(), Sphere->GetScaledSphereRadius(),
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), PreviousLocation, GetActorLocation(), SphereCollisionComponent->GetScaledSphereRadius(),
 		UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Hit, true);
 
 	PreviousLocation = GetActorLocation();
@@ -62,7 +62,7 @@ void AProjectile::CheckCollision()
 	{
 		if (HitSkeletalMesh->IsSimulatingPhysics())
 		{
-			HitSkeletalMesh->AddImpulseAtLocation(GetVelocity() * KnockbackForceMultiplier, Hit.ImpactPoint);
+			HitSkeletalMesh->AddImpulseAtLocation(GetVelocity() * KnockbackForceMultiplier, Hit.ImpactPoint, Hit.BoneName);
 		}
 	}
 
@@ -77,5 +77,20 @@ void AProjectile::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	CheckCollision();
+}
+
+UStaticMeshComponent* AProjectile::GetMesh() const
+{
+	return StaticMeshComponent;
+}
+
+UProjectileMovementComponent* AProjectile::GetProjectileMovement() const
+{
+	return ProjectileMovementComponent;
+}
+
+USphereComponent* AProjectile::GetSphere() const
+{
+	return SphereCollisionComponent;
 }
 

@@ -24,12 +24,10 @@ void AInteractableObject::OnInteract(APlayerCharacter* InteractInstigator)
 	GEngine->AddOnScreenDebugMessage(20, 3.0f, FColor::Yellow, GetName() + " Interacted With");
 }
 
-bool AInteractableObject::Interact(APlayerCharacter* InteractInstigator)
+void AInteractableObject::TryInteract(APlayerCharacter* InteractInstigator)
 {
 	OnInteract(InteractInstigator);
 	BP_OnInteract(InteractInstigator);
-	
-	return IInteractionInterface::Interact(InteractInstigator);
 }
 
 // Called every frame

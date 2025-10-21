@@ -32,7 +32,7 @@ protected:
 
 public:
 
-	virtual bool Interact(APlayerCharacter* InteractInstigator) override;
+	virtual void TryInteract(APlayerCharacter* InteractInstigator) override;
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

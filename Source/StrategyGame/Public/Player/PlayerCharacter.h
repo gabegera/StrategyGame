@@ -158,15 +158,15 @@ public:
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ARTSPlayerController* GetPlayerController();
+	ARTSPlayerController* GetPlayerController() const { return RTSPlayerController; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UCameraComponent* GetFirstPersonCamera() { return FirstPersonCamera; }
+	UCameraComponent* GetFirstPersonCamera() const { return FirstPersonCamera; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ARemoteControlTurret* GetControlledTurret() { return ControlledTurret; }
+	ARemoteControlTurret* GetControlledTurret() const { return ControlledTurret; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsSprinting() { return GetCharacterMovement()->MaxWalkSpeed == MaxSprintSpeed; }
+	bool IsSprinting() const { return GetCharacterMovement()->MaxWalkSpeed == MaxSprintSpeed; }
 
 };

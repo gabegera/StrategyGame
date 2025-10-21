@@ -1,319 +1,362 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Building/Structure.h"
 
-#include "Building/PowerLine.h"
-#include "GameFramework/GameSession.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Building/BuildExclusionZone.h"
+#include "ResourceNode.h"
+#include "Components/LookAtCameraTextRenderComponent.h"
+#include "Engine/AssetManager.h"
+#include "Engine/StreamableManager.h"
+#include "Game/StrategyGameInstance.h"
+#include "NavAreas/NavArea_Obstacle.h"
 #include "Player/RTSCamera.h"
-
 
 // Sets default values
 AStructure::AStructure()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = false;
 
+	SceneComponent = CreateDefaultSubobject<USceneComponent>("Root");
+	SetRootComponent(SceneComponent);
+
+	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("Structure Mesh");
+	StaticMeshComponent->SetupAttachment(SceneComponent);
 	StaticMeshComponent->SetCollisionProfileName("Selectable");
+	StaticMeshComponent->SetGenerateOverlapEvents(true);
+	
+	BuildingBounds = CreateDefaultSubobject<UBoxComponent>("Building Bounds");
+    BuildingBounds->SetupAttachment(StaticMeshComponent);
+    BuildingBounds->SetCollisionProfileName("OverlapAll");
+    BuildingBounds->SetGenerateOverlapEvents(true);
+	BuildingBounds->SetLineThickness(20.0f);
+	BuildingBounds->bDynamicObstacle = true;
+	BuildingBounds->SetAreaClassOverride(UNavArea_Obstacle::StaticClass());
+	BuildingBounds->SetCanEverAffectNavigation(true);
 
-	StructureText = CreateDefaultSubobject<ULookAtCameraTextRenderComponent>("Structure Text");
-	StructureText->SetupAttachment(StaticMeshComponent);
-	StructureText->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
-	StructureText->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
-	StructureText->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
-	StructureText->SetWorldSize(256.0f);
+	LookAtCameraTextRenderComponent = CreateDefaultSubobject<ULookAtCameraTextRenderComponent>("Structure Name");
+	LookAtCameraTextRenderComponent->SetupAttachment(BuildingBounds);
+	
+	ConstructorHelpers::FObjectFinder<UMaterialInstance> CanBuildMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_CanBuild.MI_CanBuild"));
+	if (CanBuildMaterialFinder.Succeeded())
+	{
+	 	CanBuildMaterial = CanBuildMaterialFinder.Object;
+		
+	}
+	ConstructorHelpers::FObjectFinder<UMaterialInstance> CanNotBuildMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_CannotBuild.MI_CannotBuild"));
+	if (CanBuildMaterialFinder.Succeeded())
+	{
+	 	CanNotBuildMaterial = CanNotBuildMaterialFinder.Object;
+	}
+	ConstructorHelpers::FObjectFinder<UMaterialInstance> IsBuildingMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_IsBuilding.MI_IsBuilding"));
+	if (CanBuildMaterialFinder.Succeeded())
+	{
+	 	IsBuildingMaterial = IsBuildingMaterialFinder.Object;
+	}
 }
 
 // Called when the game starts or when spawned
 void AStructure::BeginPlay()
 {
 	Super::BeginPlay();
+
+	LoadRandomMesh();
+
+	DefaultMaterial = StaticMeshComponent->GetMaterial(0);
+
+	if (IsBeingPlaced())
+	{
+		BuildingBounds->SetHiddenInGame(false);
+	}
+
+	BuildingBounds->SetBoxExtent(FVector(BuildingBounds->GetUnscaledBoxExtent().X - 5, BuildingBounds->GetUnscaledBoxExtent().Y - 5, BuildingBounds->GetUnscaledBoxExtent().Z - 5));
+	
+	BuildingBounds->OnComponentBeginOverlap.AddUniqueDynamic(this, &ThisClass::OnOverlapBegin);
+	BuildingBounds->OnComponentEndOverlap.AddUniqueDynamic(this, &ThisClass::OnOverlapEnd);
+
+	UpdateBuildMaterials();
 }
 
 void AStructure::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	StructureText->SetText(FText::FromString(DisplayName));
-	StructureText->SetRelativeLocation(FVector(0.0f, 0.0f, BuildingBounds->GetScaledBoxExtent().Z * 2 + 50.0f));
+	if (!MeshVariety.IsEmpty()) 
+	{
+		TSoftObjectPtr<UStaticMesh> FirstMesh = MeshVariety.Array()[0];
+
+		if (FirstMesh.IsValid())
+		{
+			StaticMeshComponent->SetStaticMesh(FirstMesh.Get());
+		}
+		else
+		{
+			StaticMeshComponent->SetStaticMesh(FirstMesh.LoadSynchronous());
+		}
+	}
+	
+	// Attempts to search for the set snapping grid size and resizes the building bounds based upon it and the static mesh size.
+	FVector StaticMeshBounds = FVector::ZeroVector;
+	if (StaticMeshComponent->GetStaticMesh()) StaticMeshBounds = StaticMeshComponent->GetStaticMesh()->GetBounds().BoxExtent;
+	
+	int32 HalfSnappingSize = 0;
+	FString GameInstancePath = TEXT("/Game/Blueprints/Game/BP_StrategyGameInstance.BP_StrategyGameInstance_C");
+	if (const TSubclassOf<UStrategyGameInstance> GameInstanceClass = StaticLoadClass(UStrategyGameInstance::StaticClass(), nullptr, *GameInstancePath))
+	{
+		HalfSnappingSize = GameInstanceClass.GetDefaultObject()->GetGridSize() / 2;
+	}
+	
+	if (StaticMeshBounds == FVector::ZeroVector) StaticMeshBounds = FVector(HalfSnappingSize, HalfSnappingSize, HalfSnappingSize);
+	FVector SnappedBounds = FVector(FMath::CeilToInt32(StaticMeshBounds.X / HalfSnappingSize) * HalfSnappingSize, FMath::CeilToInt32(StaticMeshBounds.Y / HalfSnappingSize) * HalfSnappingSize, StaticMeshBounds.Z + 100);
+	BuildingBounds->SetBoxExtent(SnappedBounds);
+	BuildingBounds->SetRelativeLocation(FVector(0.0f, 0.0f, BuildingBounds->GetScaledBoxExtent().Z));
+	
+	// If the bounds of the Structure are an odd number of grids, then add a snapping offset to line up with the snapping grid properly.
+	if (static_cast<int32>(BuildingBounds->GetUnscaledBoxExtent().X) / HalfSnappingSize % 2 != 0)
+	{
+		SnappingOffset.X = HalfSnappingSize;
+	}
+	if (static_cast<int32>(BuildingBounds->GetUnscaledBoxExtent().Y) / HalfSnappingSize % 2 != 0)
+	{
+		SnappingOffset.Y = HalfSnappingSize;
+	}
+
+	LookAtCameraTextRenderComponent->SetRelativeLocation(FVector::UpVector * BuildingBounds->GetScaledBoxExtent().Z);
+	LookAtCameraTextRenderComponent->SetText(StructureName);
 }
 
 void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->IsA(AResourceNode::StaticClass()) &&
-		GetConsumesResourcesFromNearbyNode())
+	if (OtherActor->IsA(ABuildExclusionZone::StaticClass()) ||
+		OtherActor->IsA(AStructure::StaticClass()))
 	{
-		AResourceNode* Resource = Cast<AResourceNode>(OtherActor);
-		if (GetResourcesToConsumePerSecond().Contains(Resource->GetResourceType()))
-		{
-			OverlappingResourceNodes.Add(Resource);
-		}
+		OverlappingExclusionZones.AddUnique(OtherActor);
 	}
 	
-	Super::OnOverlapBegin(OverlappedComp, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
+	UpdateBuildMaterials();
 }
 
 void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	Super::OnOverlapEnd(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
-	OverlappingResourceNodes.Remove(OtherActor);
+	OverlappingExclusionZones.Remove(OtherActor);
+
+	UpdateBuildMaterials();
 }
 
-bool AStructure::Select_Implementation(ARTSCamera* SelectInstigator)
+void AStructure::OnStructureStateChanged(AStructure* Structure, EStructureState NewStructureState)
 {
-	SelectInstigator->SetSelectedBuildable(this);
-	
+	switch (NewStructureState)
+	{
+	case EStructureState::BeingPlaced:
+		BuildingBounds->SetHiddenInGame(false);
+		break;
+	case EStructureState::UnderConstruction:
+		BuildingBounds->SetHiddenInGame(false);
+		break;
+	case EStructureState::ConstructionComplete:
+		BuildingBounds->SetHiddenInGame(true);
+		break;
+	}
+}
+
+bool AStructure::TrySelect(ARTSCamera* SelectInstigator)
+{
+	GetGameInstance<UStrategyGameInstance>()->OnStructureSelected.Broadcast(this);
 	return true;
 }
 
-void AStructure::ActivateStructureEffects()
+bool AStructure::TryRecycle(ARTSCamera* DestroyInstigator)
 {
-	if (GetGeneratesResources()) BeginGeneratingResources();
-	if (GetConsumesResources() && !GetConsumesResourcesFromNearbyNode()) BeginConsumingResources();
-	if (GetConsumesResources() && GetConsumesResourcesFromNearbyNode()) BeginDrainingResourceFromNode();
-	if (GetIncreasesStorageCapacity())
-	{
-		for (auto Resource : GetResourcesToIncreaseStorage())
-		{
-			EResourceType ResourceType = Resource.Key;
-			int32 Amount = Resource.Value;
-
-			UCityResourcesSubsystem::IncreaseCityResourceStorage(ResourceType, Amount);
-		}
-	}
-
-	if (DoesIncreasePopulationCapacity())
-	{
-		UCityResourcesSubsystem::IncreaseCityPopulationCapacity(GetAdditionalPopulationCapacity());
-	}
+	Recycle();
+	return true;
 }
 
-AResourceNode* AStructure::FindClosestResourceNode()
+void AStructure::MoveBuilding(FVector NewLocation)
 {
-	if (OverlappingResourceNodes.IsEmpty()) return nullptr;
-	
-	float ClosestDistance = 0.0f;
-	AActor* ClosestActor = nullptr;
-	for (AActor* Node : OverlappingResourceNodes)
-	{
-		if (ClosestDistance <= 0.0f)
-		{
-			ClosestActor = Node;
-			ClosestDistance = GetDistanceTo(Node);
-		}
-		else if (GetDistanceTo(Node) < ClosestDistance)
-		{
-			ClosestActor = Node;
-		}
-	}
+	SetActorLocation(NewLocation);
+}
 
-	return Cast<AResourceNode>(ClosestActor);
+void AStructure::PlaceBuilding()
+{
+	if (!IsBuildingPermitted()) return;
+	
+	AStructure* NewStructure = GetWorld()->SpawnActor<AStructure>(GetClass(), GetActorTransform());
+	NewStructure->BeginConstruction();
 }
 
 void AStructure::BeginConstruction()
 {
-	Super::BeginConstruction();
-
-	if (GetConsumesResourcesFromNearbyNode())
+	ConsumeConstructionResources();
+	
+	if (TimeToCompleteConstruction == 0)
 	{
-		TargetResourceNode = FindClosestResourceNode();
-		if (TargetResourceNode) TargetResourceNode->SetAssignedExtractor(this);
+		CompleteConstruction();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(ConstructionTimer, this, &AStructure::CompleteConstruction, TimeToCompleteConstruction);
+	
+	SetStructureState(EStructureState::UnderConstruction);
+	UpdateBuildMaterials();
+}
+
+void AStructure::CancelConstruction()
+{
+	GetWorldTimerManager().ClearTimer(ConstructionTimer);
+	RefundConstructionMaterials();
+	
+	Destroy();
+}
+
+void AStructure::ConsumeConstructionResources()
+{
+	for (auto Resource : ConstructionCost)
+	{
+		UResourceDataAsset* ResourceData = Resource.Key;
+		int32 ResourceAmount = Resource.Value;
+
+		GetGameInstance()->GetSubsystem<UResourcesSubsystem>()->ConsumeResources(ResourceData, ResourceAmount);
+	}
+}
+
+void AStructure::RefundConstructionMaterials()
+{
+	for (auto Resource : ConstructionCost)
+	{
+		UResourceDataAsset* ResourceData = Resource.Key;
+		int32 ResourceAmount = Resource.Value;
+		
+		GetGameInstance()->GetSubsystem<UResourcesSubsystem>()->AddResources(ResourceData, ResourceAmount);
 	}
 }
 
 void AStructure::CompleteConstruction()
 {
-	Super::CompleteConstruction();
-	ActivateStructureEffects();
-	GetStrategyGameState()->StructureBuiltDelegate.Broadcast(this);
+	SetStructureState(EStructureState::ConstructionComplete);
+	UpdateBuildMaterials();
+	GetGameInstance<UStrategyGameInstance>()->OnStructureBuilt.Broadcast(this);
 }
 
 void AStructure::Recycle()
 {
-	RevertStorageCapacity();
-	GetStrategyGameState()->StructureDestroyedDelegate.Broadcast(this);
+	RefundConstructionMaterials();
 	
-	Super::Recycle();
-}
+	GetGameInstance<UStrategyGameInstance>()->OnStructureDestroyed.Broadcast();
 
-void AStructure::RevertStorageCapacity()
-{
-	for (auto Resource : GetResourcesToIncreaseStorage())
-	{
-		EResourceType ResourceType = Resource.Key;
-		int32 ResourceAmount = Resource.Value;
-		
-		UCityResourcesSubsystem::DecreaseCityResourceStorage(ResourceType, ResourceAmount);
-	}
-}
-
-void AStructure::BeginGeneratingResources()
-{
-	GetWorldTimerManager().SetTimer(ResourceGenerationTimer, this, &AStructure::GenerateResources, 1.0f, true);
-}
-
-void AStructure::GenerateResources()
-{
-	for (auto Resource : GetResourcesToGeneratePerSecond())
-	{
-		EResourceType ResourceType = Resource.Key;
-		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
-		
-		UCityResourcesSubsystem::AddCityResources(ResourceType, ResourceAmount);
-	}
-}
-
-void AStructure::BeginConsumingResources()
-{
-	GetWorldTimerManager().SetTimer(ResourceConsumptionTimer, this, &AStructure::ConsumeResources, 1.0f, true);
-}
-
-void AStructure::ConsumeResources()
-{
-	for (auto Resource : GetResourcesToConsumePerSecond())
-	{
-		EResourceType ResourceType = Resource.Key;
-		float ResourceAmount = Resource.Value * GetWorkerEfficiency();
-		
-		UCityResourcesSubsystem::ConsumeCityResources(ResourceType, ResourceAmount);
-	}
-}
-
-void AStructure::BeginDrainingResourceFromNode()
-{
-	GetWorldTimerManager().SetTimer(ResourceDrainingTimer, this, &AStructure::DrainResourceFromNode, 1.0f, true);
-}
-
-void AStructure::DrainResourceFromNode()
-{
-	if (TargetResourceNode)
-	{
-		int32 ResourceStorageCapacity = UCityResourcesSubsystem::GetCityResourceCapacity(TargetResourceNode->GetResourceType());
-		float ResourceStorageAmount = UCityResourcesSubsystem::GetCityResourceAmount(TargetResourceNode->GetResourceType());
-		if (ResourceStorageCapacity >= ResourceStorageAmount + GetResourcesToConsumePerSecond().FindRef(TargetResourceNode->GetResourceType()))
-		{
-			float AmountToDrain = GetResourcesToConsumePerSecond().FindRef(TargetResourceNode->GetResourceType());
-			AmountToDrain *= GetWorkerEfficiency();
-			TargetResourceNode->DrainResource(AmountToDrain);
-		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(950, 3.0f, FColor::Red, GetDisplayName() + " Can't extract resources, storage is full.");
-		}
-	}
-	else
-	{
-		OverlappingResourceNodes.Remove(TargetResourceNode);
-
-		if (IsOverlappingResourceNode())
-		{
-			TargetResourceNode = FindClosestResourceNode();
-			if (TargetResourceNode) TargetResourceNode->SetAssignedExtractor(this);
-		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(951, 3.0f, FColor::Red, GetDisplayName() + ": No Nearby Ore Nodes.");
-		}
-	}
-}
-
-void AStructure::AssignWorkers(ECitizenType WorkerType, int32 Amount)
-{
-	if (Amount <= 0) return;
-	
-	if (IsWorkerCapacityFull())
-	{
-		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + ": Worker Capacity is full.");
-		return;
-	}
-	
-	if (!GetAllowScientistEmployment() && WorkerType == ECitizenType::Scientist)
-	{
-		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + "Scientists aren't permitted to work here.");
-		return;
-	}
-	if (!GetAllowWorkerEmployment() && WorkerType == ECitizenType::Worker)
-	{
-		GEngine->AddOnScreenDebugMessage(200, 3.0f, FColor::Red, DisplayName + "Workers aren't permitted to work here.");
-		return;
-	}
-
-	if (UCityResourcesSubsystem::GetCityUnemployedPopulation(WorkerType) >= Amount)
-	{
-		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + Amount);
-	}
-	else
-	{
-		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) + UCityResourcesSubsystem::GetCityUnemployedPopulation(WorkerType));
-	}
-}
-
-void AStructure::AddMaxWorkers(ECitizenType WorkerType)
-{
-	AssignWorkers(WorkerType, GetAvailableWorkersSlots());
-}
-
-void AStructure::RemoveWorkers(ECitizenType WorkerType, int32 Amount)
-{
-	if (Amount <= 0) return;
-	
-	if (GetWorkerCount(WorkerType) >= Amount)
-	{
-		AssignedWorkers.Add(WorkerType, GetWorkerCount(WorkerType) - Amount);
-	}
-	else
-	{
-		AssignedWorkers.Add(WorkerType, 0);
-	}
-}
-
-void AStructure::RemoveAllWorkers(ECitizenType WorkerType)
-{
-	switch (WorkerType) {
-	case ECitizenType::Worker:
-		RemoveWorkers(ECitizenType::Worker, GetWorkerCount(ECitizenType::Worker));
-		break;
-	case ECitizenType::Scientist:
-		RemoveWorkers(ECitizenType::Scientist, GetWorkerCount(ECitizenType::Scientist));
-		break;
-	}
+	Destroy();
 }
 
 void AStructure::UpdateBuildMaterials()
 {
-	Super::UpdateBuildMaterials();
+	ensureMsgf(CanBuildMaterial, TEXT("%s AStructure::UpdateBuildMaterials CanBuildMaterial is not set"), *GetName());
+	ensureMsgf(CanNotBuildMaterial, TEXT("%s AStructure::UpdateBuildMaterials CanNotBuildMaterial is not set"), *GetName());
+	ensureMsgf(IsBuildingMaterial, TEXT("%s AStructure::UpdateBuildMaterials IsBuildingMaterial is not set"), *GetName());
+
+	TArray<UStaticMeshComponent*> StaticMeshComponents;
+	GetComponents<UStaticMeshComponent>(StaticMeshComponents);
+	
+	if (IsUnderConstruction())
+	{
+		if (!IsBuildingMaterial) return;
+		
+		for (auto StaticMesh : StaticMeshComponents)
+		{
+			StaticMesh->SetMaterial(0, IsBuildingMaterial);
+		}
+		return;
+	}
+	if (IsConstructionComplete())
+	{
+		if (!DefaultMaterial) return;
+		
+		for (auto StaticMesh : StaticMeshComponents)
+		{
+			StaticMesh->SetMaterial(0, DefaultMaterial);
+		}
+		return;
+	}
+
+	if (IsBuildingPermitted())
+	{
+		if (!CanBuildMaterial) return;
+		
+		for (auto StaticMesh : StaticMeshComponents)
+		{
+			StaticMesh->SetMaterial(0, CanBuildMaterial);
+		}
+	}
+	else
+	{
+		if (!CanNotBuildMaterial) return;
+		
+		for (auto StaticMesh : StaticMeshComponents)
+		{
+			StaticMesh->SetMaterial(0, CanNotBuildMaterial);
+		}
+	}
 }
 
-// Called every frame
-void AStructure::Tick(float DeltaTime)
+void AStructure::LoadRandomMesh() const
 {
-	Super::Tick(DeltaTime);
+	if (MeshVariety.IsEmpty()) return;
+
+	const TSoftObjectPtr<UStaticMesh> RandomMesh = MeshVariety.Array()[FMath::RandRange(0, MeshVariety.Num() - 1)];
+
+	if (RandomMesh.IsValid())
+	{
+		StaticMeshComponent->SetStaticMesh(RandomMesh.Get());
+		return;
+	}
+	
+	UAssetManager::GetStreamableManager().RequestAsyncLoad(RandomMesh.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this, &ThisClass::OnMeshLoaded, RandomMesh));
+}
+
+void AStructure::OnMeshLoaded(const TSoftObjectPtr<UStaticMesh> LoadedMesh) const
+{
+	if (!LoadedMesh.IsValid()) return;
+
+	StaticMeshComponent->SetStaticMesh(LoadedMesh.Get());
+}
+
+EStructureState AStructure::SetStructureState(EStructureState NewMode)
+{
+	StructureState = NewMode;
+	UpdateBuildMaterials();
+
+	return StructureState;
 }
 
 bool AStructure::IsBuildingPermitted()
 {
-	if (GetConsumesResourcesFromNearbyNode() && !IsOverlappingResourceNode())
+	if (!HaveEnoughResourcesToBuild() && IsBeingPlaced())
 	{
-		GEngine->AddOnScreenDebugMessage(800, 3.0f, FColor::Red, GetDisplayName() + " needs to be near the correct resource.");
+		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "Not enough materials to build " + StructureName.ToString());
 		return false;
 	}
-	if (IsOverlappingResourceNode() && GetConsumesResourcesFromNearbyNode() && FindClosestResourceNode()->GetAssignedExtractor())
-	{
-		GEngine->AddOnScreenDebugMessage(801, 3.0f, FColor::Red, "The Resource node already has an assigned extractor.");
-		return false;
-	}	
 	
-	return Super::IsBuildingPermitted();
+	if (IsOverlappingBuildExclusionZone())
+	{
+		GEngine->AddOnScreenDebugMessage(802, 3.0f, FColor::Red, StructureName.ToString() + " is overlapping Build Exclusion Zone.");
+		return false;
+	}
+
+	return true;
 }
 
-const FStructureData* AStructure::GetStructureData()
+bool AStructure::HaveEnoughResourcesToBuild()
 {
-	FStructureData* Data = StructureDataTableRow.GetRow<FStructureData>("");
+	for (TPair ResourceCost : ConstructionCost)
+	{
+		UResourceDataAsset* ResourceData = ResourceCost.Key;
+		int32 AmountNeeded = ResourceCost.Value;
+		
+		if (GetGameInstance()->GetSubsystem<UResourcesSubsystem>()->GetResourceAmountInt(ResourceData) < AmountNeeded)
+		{
+			return false;
+		}
+	}
 
-	FString DebugName = GetDebugName(this);
-	verifyf(Data, TEXT("AStructure::GetStructureData failed to get FStructureData pointer %s."), *DebugName);
-
-	return Data;
+	return true;
 }
 

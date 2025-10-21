@@ -121,7 +121,7 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 	FOnItemSecondaryReleasedDelegate OnItemSecondaryReleasedDelegate;
 
-	virtual bool Interact(APlayerCharacter* InteractInstigator) override;
+	virtual void TryInteract(APlayerCharacter* InteractInstigator) override;
 
 	UFUNCTION(BlueprintCallable, Category="Equippable Item")
 	virtual void UseItemPrimary();

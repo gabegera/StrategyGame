@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "CityResourcesSubsystem.h"
+#include "ResourcesSubsystem.h"
 #include "Destructible.h"
 #include "Enemies/EnemyCharacter.h"
 #include "Objective.generated.h"
@@ -28,7 +28,7 @@ struct FObjective
 		EnemyType = nullptr;
 		DestructibleType = nullptr;
 		bAnyResources = true;
-		ResourceType = EResourceType::AlienMaterial;
+		TargetResource = nullptr;
 		Progress = 0;
 		RequiredProgress = 1;
 	}
@@ -47,7 +47,7 @@ struct FObjective
 		EnemyType = InEnemyType;
 		DestructibleType = nullptr;
 		bAnyResources = true;
-		ResourceType = EResourceType::AlienMaterial;
+		TargetResource = nullptr;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -66,7 +66,7 @@ struct FObjective
 		EnemyType = nullptr;
 		DestructibleType = InResourceType;
 		bAnyResources = true;
-		ResourceType = EResourceType::AlienMaterial;
+		TargetResource = nullptr;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -85,7 +85,7 @@ struct FObjective
 		EnemyType = nullptr;
 		DestructibleType = nullptr;
 		bAnyResources = bInAnyResource;
-		ResourceType = EResourceType::AlienMaterial;
+		TargetResource = nullptr;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -97,14 +97,14 @@ struct FObjective
 	 * @param InResourceType The type of resource that needs to be stolen to progress the objective.
 	 * @param InRequiredProgress How many "Enemies Killed" are needed to complete the objective.
 	 */
-	FObjective(EObjectiveType InObjectiveType, FString InTitle, EResourceType InResourceType, int32 InRequiredProgress)
+	FObjective(EObjectiveType InObjectiveType, FString InTitle, UResourceDataAsset* InResource, int32 InRequiredProgress)
 	{
 		Title = InTitle;
 		ObjectiveType = InObjectiveType;
 		EnemyType = nullptr;
 		DestructibleType = nullptr;
 		bAnyResources = false;
-		ResourceType = InResourceType;
+		TargetResource = InResource;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -122,7 +122,7 @@ struct FObjective
 		EnemyType = nullptr;
 		DestructibleType = nullptr;
 		bAnyResources = true;
-		ResourceType = EResourceType::AlienMaterial;
+		TargetResource = nullptr;
 		Progress = 0;
 		RequiredProgress = InRequiredProgress;
 	}
@@ -148,7 +148,7 @@ struct FObjective
 
 	// The type of resource that needs stolen to progress the objective.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(EditCondition="ObjectiveType == EObjectiveType::StealResources && !bAnyResources", EditConditionHides))
-	EResourceType ResourceType;
+	UResourceDataAsset* TargetResource;
 
 	UPROPERTY(VisibleAnywhere)
 	int32 Progress;

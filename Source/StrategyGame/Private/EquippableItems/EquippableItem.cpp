@@ -16,7 +16,13 @@ AEquippableItem::AEquippableItem()
 	SetRootComponent(SkeletalMeshComponent);
 	SkeletalMeshComponent->SetCollisionProfileName("PhysicsActorOverlapOnlyPawn");
 	SkeletalMeshComponent->SetSimulatePhysics(true);
+}
 
+// Called when the game starts or when spawned
+void AEquippableItem::BeginPlay()
+{
+	Super::BeginPlay();
+	
 	OnEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnEquipped);
 	OnUnEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnUnEquipped);
 	OnPickedUpDelegate.AddUniqueDynamic(this, &ThisClass::OnPickedUp);
@@ -26,12 +32,6 @@ AEquippableItem::AEquippableItem()
 	OnItemPrimaryReleasedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemPrimaryReleased);
 	OnItemSecondaryUsedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemSecondaryUsed);
 	OnItemSecondaryReleasedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemSecondaryReleased);
-}
-
-// Called when the game starts or when spawned
-void AEquippableItem::BeginPlay()
-{
-	Super::BeginPlay();
 }
 
 void AEquippableItem::OnConstruction(const FTransform& Transform)
@@ -71,11 +71,9 @@ void AEquippableItem::OnDropped()
 	BP_OnDropped();
 }
 
-bool AEquippableItem::Interact(APlayerCharacter* InteractInstigator)
+void AEquippableItem::TryInteract(APlayerCharacter* InteractInstigator)
 {
 	InteractInstigator->PickupEquippable(this);
-	
-	return true;
 }
 
 void AEquippableItem::UseItemPrimary()

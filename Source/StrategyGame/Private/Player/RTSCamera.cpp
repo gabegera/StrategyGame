@@ -3,12 +3,11 @@
 
 #include "Player/RTSCamera.h"
 
-#include "Building/Road.h"
+#include "StrategyStatics.h"
+#include "Game/StrategyGameInstance.h"
 #include "Player/PlayerCharacter.h"
-#include "Components/ArrowComponent.h"
-#include "Game/StrategyGameModeBase.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Game/CityDefenseGameMode.h"
+#include "Game/TimeSubsystem.h"
 
 // Sets default values
 ARTSCamera::ARTSCamera()
@@ -34,6 +33,21 @@ void ARTSCamera::BeginPlay()
 	SpringArm->TargetArmLength = (ZoomDistanceMax + ZoomDistanceMin) / 2;
 	ZoomDistanceTarget = SpringArm->TargetArmLength;
 	UpdateCameraPitch();
+
+	UStrategyGameInstance* StrategyGameInstance = GetGameInstance<UStrategyGameInstance>();
+
+	StrategyGameInstance->OnStructureSelected.AddUniqueDynamic(this, &ThisClass::OnStructureSelected);
+	StrategyGameInstance->OnStructureDeSelected.AddUniqueDynamic(this, &ThisClass::OnStructureDeSelected);
+}
+
+void ARTSCamera::OnStructureSelected(AStructure* InSelectedStructure)
+{
+	SelectedStructure = InSelectedStructure;
+}
+
+void ARTSCamera::OnStructureDeSelected()
+{
+	SelectedStructure = nullptr;
 }
 
 void ARTSCamera::Move(FVector2D MoveInput)
@@ -90,25 +104,26 @@ void ARTSCamera::SelectTarget()
 {
 	FHitResult Hit = LineTraceToMousePos(ECC_GameTraceChannel2);
 
-	if (BuildableBlueprint && BuildableBlueprint->IsBeingCreated())
+	if (SelectedStructure && SelectedStructure->IsBeingPlaced())
 	{
-		PlaceBlueprint();
+		PlaceStructure();
 		return;
 	}
 
-	if (Hit.GetActor() && Hit.GetActor()->Implements<UBuildingInterface>())
+	if (Hit.GetActor() && Hit.GetActor()->Implements<UStructureInterface>())
 	{
+		IStructureInterface* StructureInterface = Cast<IStructureInterface>(Hit.GetActor());
+		
 		switch (CurrentRTSTool)
 		{
 		case SelectTool:
-			 if (Execute_Select(Hit.GetActor(), this))
-			 {
-				 OnBuildableSelected.Broadcast(SelectedBuildable);
-			 }
+			StructureInterface->TrySelect(this);
 			break;
+			
 		case RecycleTool:
-			Execute_Recycle(Hit.GetActor(), this);
+			StructureInterface->TryRecycle(this);
 			break;
+			
 		default:
 			break;
 		}		
@@ -121,16 +136,16 @@ void ARTSCamera::SelectTarget()
 
 void ARTSCamera::DeselectTarget()
 {
-	SelectedBuildable = nullptr;
-	OnBuildableDeSelected.Broadcast();
+	SelectedStructure = nullptr;
+	GetGameInstance<UStrategyGameInstance>()->OnStructureDeSelected.Broadcast();
 }
 
 void ARTSCamera::CancelAction()
 {
-	if (BuildableBlueprint && BuildableBlueprint->IsBeingCreated())
+	if (SelectedStructure && SelectedStructure->IsBeingPlaced())
 	{
-		BuildableBlueprint->Destroy();
-		BuildableBlueprint = nullptr;
+		SelectedStructure->Destroy();
+		SelectedStructure = nullptr;
 	}
 
 	if (CurrentRTSTool != ERTSTool::SelectTool)
@@ -139,22 +154,22 @@ void ARTSCamera::CancelAction()
 	}
 }
 
-void ARTSCamera::PlaceBlueprint()
+void ARTSCamera::PlaceStructure()
 {
-	BuildableBlueprint->PlaceBuilding();
+	SelectedStructure->PlaceBuilding();
 }
 
-void ARTSCamera::RotateBuilding()
+void ARTSCamera::RotateStructure()
 {
-	BuildableBlueprint->SetActorRotation(BuildableBlueprint->GetActorRotation() + FRotator(0.0f, 90.0f, 0.0f));
+	SelectedStructure->SetActorRotation(SelectedStructure->GetActorRotation() + FRotator(0.0f, 90.0f, 0.0f));
 }
 
 void ARTSCamera::EquipRecycleTool()
 {
-	if (BuildableBlueprint)
+	if (SelectedStructure)
 	{
-		BuildableBlueprint->Destroy();
-		BuildableBlueprint = nullptr;
+		SelectedStructure->Destroy();
+		SelectedStructure = nullptr;
 	}
 	
 	CurrentRTSTool = ERTSTool::RecycleTool;
@@ -166,7 +181,7 @@ void ARTSCamera::ExitRTSMode()
 
 	CancelAction();
 
-	GetStrategyGameState()->SetTimeScale(ETimeScale::OneTimesSpeed);
+	GetGameInstance()->GetSubsystem<UTimeSubsystem>()->SetTimeScaleMultiplier(1.0f);
 
 	GetPlayerController()->Possess(GetPlayerController()->GetPlayerCharacter());
 }
@@ -184,7 +199,7 @@ FHitResult ARTSCamera::LineTraceToMousePos(ECollisionChannel CollisionChannel)
 	TArray<AActor*> ActorsToIgnore;
 	GetAllChildActors(ActorsToIgnore);
 	ActorsToIgnore.Add(this);
-	if (BuildableBlueprint) ActorsToIgnore.Add(BuildableBlueprint);
+	if (SelectedStructure) ActorsToIgnore.Add(SelectedStructure);
 
 	TraceParams.AddIgnoredActors(ActorsToIgnore);
 
@@ -193,41 +208,24 @@ FHitResult ARTSCamera::LineTraceToMousePos(ECollisionChannel CollisionChannel)
 	return Hit;
 }
 
-void ARTSCamera::SelectBuildableBlueprint(TSubclassOf<ABuildable> NewBlueprint)
+void ARTSCamera::SelectStructure(TSubclassOf<AStructure> NewStructure)
 {
 	CancelAction();
-	BuildableBlueprint = GetWorld()->SpawnActor<ABuildable>(NewBlueprint);
-	BuildableBlueprint->SetBuildableState(EBuildableState::BeingCreated);
+	SelectedStructure = GetWorld()->SpawnActorDeferred<AStructure>(NewStructure, FTransform());
+	SelectedStructure->SetStructureState(EStructureState::BeingPlaced);
+	SelectedStructure->FinishSpawning(FTransform());
 }
 
-void ARTSCamera::MoveBlueprintToMousePos()
+void ARTSCamera::MoveStructureToMousePos()
 {
-	if (!BuildableBlueprint) return;
+	if (!SelectedStructure) return;
 
 	FHitResult Hit = LineTraceToMousePos(ECC_GameTraceChannel1);
 	
-	FVector NewLocation = SnapVectorToGrid(Hit.ImpactPoint, GetSnappingSize());
-	NewLocation += FVector(BuildableBlueprint->GetSnappingOffset().X, BuildableBlueprint->GetSnappingOffset().Y, 0.0f);
+	FVector NewLocation = SnapVectorToGrid(Hit.ImpactPoint, UStrategyStatics::GetGridSize(this));
+	NewLocation += FVector(SelectedStructure->GetSnappingOffset().X, SelectedStructure->GetSnappingOffset().Y, 0.0f);
 
-	BuildableBlueprint->MoveBuilding(NewLocation);
-}
-
-void ARTSCamera::OnTimeScaleChanged(const ETimeScale NewTimeScale)
-{
-	switch (NewTimeScale)
-	{
-	case ETimeScale::OneTimesSpeed:
-		CustomTimeDilation = 1.0f;
-		break;
-	case ETimeScale::TwoTimesSpeed:
-		CustomTimeDilation = 1.0f / 2.0f;
-		break;
-	case ETimeScale::ThreeTimesSpeed:
-		CustomTimeDilation = 1.0f / 3.0f;
-		break;
-	}
-	
-	BP_OnTimeScaleChanged(NewTimeScale);
+	SelectedStructure->MoveBuilding(NewLocation);
 }
 
 // Called every frame
@@ -240,9 +238,9 @@ void ARTSCamera::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(1, 1.0f, FColor::White, " ");
 	GEngine->AddOnScreenDebugMessage(2, 1.0f, FColor::White, " ");
 
-	if (BuildableBlueprint && BuildableBlueprint->IsBeingCreated())
+	if (SelectedStructure && SelectedStructure->IsBeingPlaced())
 	{
-		MoveBlueprintToMousePos(); 
+		MoveStructureToMousePos(); 
 	}
 
 	if (SpringArm->TargetArmLength != ZoomDistanceTarget)
@@ -268,25 +266,5 @@ ARTSPlayerController* ARTSCamera::GetPlayerController()
 	}
 
 	return RTSPlayerController;
-}
-
-AStrategyGameState* ARTSCamera::GetStrategyGameState()
-{
-	if (StrategyGameState == nullptr)
-	{
-		StrategyGameState = Cast<AStrategyGameState>(GetWorld()->GetGameState());
-	}
-
-	return StrategyGameState;
-}
-
-AStrategyGameModeBase* ARTSCamera::GetStrategyGameMode()
-{
-	if (StrategyGameMode == nullptr)
-	{
-		StrategyGameMode = Cast<AStrategyGameModeBase>(GetWorld()->GetAuthGameMode());
-	}
-
-	return StrategyGameMode;
 }
 

@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "Components/SphereComponent.h"
 #include "CustomActor.h"
-#include "Game/CityResourcesSubsystem.h"
+#include "Game/ResourcesSubsystem.h"
 #include "ResourceNode.generated.h"
 
-class ABuildable;
+class AStructure;
 
 UCLASS()
 class STRATEGYGAME_API AResourceNode : public ACustomActor
@@ -29,10 +29,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	USphereComponent* Sphere;
 
-	UPROPERTY() ABuildable* AssignedExtractor;
+	UPROPERTY() AStructure* AssignedExtractor;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
-	EResourceType ResourceType = EResourceType::Metal;
+	UResourceDataAsset* ResourceType;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	int32 ResourceAmount = 500;
@@ -50,7 +50,7 @@ public:
 	// ------ SETTERS ------
 
 	UFUNCTION(BlueprintCallable)
-	void SetAssignedExtractor(ABuildable* NewExtractor);
+	void SetAssignedExtractor(AStructure* NewExtractor);
 
 	// ------ GETTERS ------
 
@@ -58,8 +58,8 @@ public:
 	int32 GetResourceAmount() { return ResourceAmount; }
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	EResourceType GetResourceType() { return ResourceType; }
+	UResourceDataAsset* GetResourceType() { return ResourceType; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ABuildable* GetAssignedExtractor() { return AssignedExtractor; }
+	AStructure* GetAssignedExtractor() { return AssignedExtractor; }
 };

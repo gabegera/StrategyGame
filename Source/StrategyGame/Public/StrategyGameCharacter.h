@@ -75,7 +75,7 @@ protected:
 	virtual void OnDeath();
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnDeath")
-	void BP_OnDeath();
+	void ReactToDeath();
 
 public:
 

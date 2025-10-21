@@ -3,9 +3,6 @@
 
 #include "CustomActor.h"
 
-#include "Game/StrategyGameModeBase.h"
-#include "Game/StrategyGameState.h"
-
 
 // Sets default values
 ACustomActor::ACustomActor()
@@ -14,23 +11,8 @@ ACustomActor::ACustomActor()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-AStrategyGameState* ACustomActor::GetStrategyGameState()
+void ACustomActor::BeginPlay()
 {
-	if (StrategyGameState == nullptr)
-	{
-		StrategyGameState = Cast<AStrategyGameState>(GetWorld()->GetGameState());
-	}
-
-	return StrategyGameState;
-}
-
-AStrategyGameModeBase* ACustomActor::GetStrategyGameMode()
-{
-	if (StrategyGameMode == nullptr)
-	{
-		StrategyGameMode = Cast<AStrategyGameModeBase>(GetWorld()->GetAuthGameMode());
-	}
-
-	return StrategyGameMode;
+	Super::BeginPlay();
 }
 

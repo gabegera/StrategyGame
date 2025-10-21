@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "StrategyGameModeBase.h"
 #include "Objective.h"
+#include "RaidSettings.h"
 #include "FPSRaidGameMode.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnObjectiveUpdatedDelegate);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllObjectivesCompletedDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FObjectiveUpdatedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllObjectivesCompletedSignature);
 
 class ADestructible;
 class AStrategyGameCharacter;
@@ -16,7 +16,7 @@ class AStrategyGameCharacter;
  * The Game Mode that is used when you are raiding an enemy base in the First Person Mode.
  */
 UCLASS()
-class STRATEGYGAME_API AFPSRaidGameMode : public AStrategyGameModeBase
+class STRATEGYGAME_API AFPSRaidGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 
@@ -25,6 +25,9 @@ public:
 	AFPSRaidGameMode();
 
 protected:
+
+	UPROPERTY(EditAnywhere)
+	FRaidSettings RaidSettings;
 
 	UPROPERTY(VisibleAnywhere)
 	TArray<FObjective> RaidObjectives;
@@ -41,21 +44,21 @@ protected:
 	virtual void OnObjectiveUpdated();
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnObjectiveUpdated")
-	void BP_OnObjectiveUpdated();
+	void ReactToObjectiveUpdated();
 
 	UFUNCTION()
 	void OnAllObjectivesCompleted();
 
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnAllObjectivesCompleted")
-	void BP_OnAllObjectivesCompleted();
+	void ReactToAllObjectivesCompleted();
 
 public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FOnObjectiveUpdatedDelegate OnObjectiveUpdatedDelegate;
+	FObjectiveUpdatedSignature OnObjectiveUpdatedDelegate;
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FOnAllObjectivesCompletedDelegate OnAllObjectivesCompletedDelegate;
+	FOnAllObjectivesCompletedSignature OnAllObjectivesCompletedDelegate;
 
 	UFUNCTION(BlueprintCallable, Category="FPS Raid Game Mode")
 	void AddObjective(FObjective NewObjective);

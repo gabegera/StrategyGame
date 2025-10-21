@@ -20,18 +20,17 @@ AStrategyGameCharacter::AStrategyGameCharacter()
 	EquipmentPositionArrowComponent = CreateDefaultSubobject<UArrowComponent>("Dev Equipment Position");
 	EquipmentPositionArrowComponent->SetupAttachment(GetMesh());
 	EquipmentPositionArrowComponent->SetRelativeLocation(FVector(0.0f, 40.0f, 140.0f));
-
-	OnItemEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemEquipped);
-	OnItemUnEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemUnEquipped);
-	OnItemPickedUpDelegate.AddUniqueDynamic(this, &ThisClass::OnItemPickedUp);
-	OnItemDroppedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemDropped);
 }
 
 // Called when the game starts or when spawned
 void AStrategyGameCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	OnItemEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemEquipped);
+	OnItemUnEquippedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemUnEquipped);
+	OnItemPickedUpDelegate.AddUniqueDynamic(this, &ThisClass::OnItemPickedUp);
+	OnItemDroppedDelegate.AddUniqueDynamic(this, &ThisClass::OnItemDropped);
 }
 
 void AStrategyGameCharacter::OnItemEquipped(AEquippableItem* ItemEquipped)
@@ -56,7 +55,7 @@ void AStrategyGameCharacter::OnItemDropped(AEquippableItem* ItemDropped)
 
 void AStrategyGameCharacter::OnDeath()
 {
-	BP_OnDeath();
+	ReactToDeath();
 }
 
 void AStrategyGameCharacter::UseEquippedItem()

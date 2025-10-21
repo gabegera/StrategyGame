@@ -38,7 +38,7 @@ struct FTerminalCommand
 
 	// The Object to trigger when the command is entered.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Terminal Command", meta=(EditCondition="CommandType == ECommandType::RemotelyTriggerObject", EditConditionHides))
-	TSoftObjectPtr<AActor> ObjectToRemotelyTrigger;
+	TSet<TSoftObjectPtr<AActor>> ObjectsToRemotelyTrigger;
 
 	// The Display name for the object to be remotely triggered. Only used for printing strings.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Terminal Command", meta=(EditCondition="CommandType == ECommandType::RemotelyTriggerObject", EditConditionHides))

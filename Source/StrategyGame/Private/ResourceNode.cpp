@@ -47,7 +47,7 @@ void AResourceNode::DrainResource(int32 DecreaseAmount)
 	}
 }
 
-void AResourceNode::SetAssignedExtractor(ABuildable* NewExtractor)
+void AResourceNode::SetAssignedExtractor(AStructure* NewExtractor)
 {
 	if (GetAssignedExtractor())
 	{

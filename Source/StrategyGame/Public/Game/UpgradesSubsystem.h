@@ -3,38 +3,64 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UpgradeDataAsset.h"
+#include "DataAssets/UpgradeDataAsset.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UpgradesSubsystem.generated.h"
 
+enum class EStructureCategory : uint8;
+class AStructure;
+class UUpgradeDataAsset;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpgradeUnlocked, UUpgradeDataAsset*, UnlockedUpgrade);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpgradeUnlockedSignature, UUpgradeDataAsset*, UnlockedUpgrade);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureUnlockedSignature, TSubclassOf<AStructure>, UnlockedStructure);
 
 /**
- * 
+ * The system that manages unlocking upgrades and storing them for future use.
  */
-UCLASS()
+UCLASS(DisplayName="Upgrades Subsystem")
 class STRATEGYGAME_API UUpgradesSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 
 protected:
-	
-	static inline TSet<TSoftObjectPtr<UUpgradeDataAsset>> UnlockedUpgrades;
+
+	UPROPERTY(VisibleAnywhere, Category="Upgrades Subsystem")
+	TSet<UUpgradeDataAsset*> UnlockedUpgrades;
+
+	UPROPERTY(VisibleAnywhere, Category="Upgrades Subsystem")
+	TSet<TSubclassOf<AStructure>> UnlockedStructures;
 
 public:
 
-	static inline FOnUpgradeUnlocked OnUpgradeUnlocked;
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FUpgradeUnlockedSignature OnUpgradeUnlocked;
 
-	UFUNCTION(BlueprintCallable, Category="Upgrades Subsystem")
-	static void UnlockUpgrade(UUpgradeDataAsset* Upgrade);
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FStructureUnlockedSignature OnStructureUnlocked;
 
+	/**
+	 * Attempts to unlock an input upgrade based on it's pre-requisites.
+	 * @param InUpgrade The Upgrade to unlock.
+	 * @return Returns if the upgrade was successful.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Upgrades Subsystem")
-	static TSet<TSoftObjectPtr<UUpgradeDataAsset>>& GetUnlockedUpgrades();
+	bool UnlockUpgrade(UUpgradeDataAsset* InUpgrade);
+
+	UFUNCTION(BlueprintCallable, Category="Upgradse Subsystem")
+	void UnlockStructure(const TSubclassOf<AStructure> InStructure);
+
+	UFUNCTION(BlueprintPure, Category="Upgrades Subsystem")
+	TSet<UUpgradeDataAsset*>& GetUnlockedUpgrades();
+
+	UFUNCTION(BlueprintPure, Category="Upgrades Subsystem")
+	TSet<TSubclassOf<AStructure>>& GetUnlockedStructures();
+
+	UFUNCTION(BlueprintPure)
+	TSet<TSubclassOf<AStructure>> GetUnlockedStructuresOfCategory(EStructureCategory StructureCategory);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Upgrades Subsystem")
-	static bool IsUpgradeUnlocked(TSoftObjectPtr<UUpgradeDataAsset> InUpgrade);
+	bool IsUpgradeUnlocked(const UUpgradeDataAsset* InUpgrade);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Upgrdes Subsystem")
-	static bool ArePreRequisitesUnlocked(TSoftObjectPtr<UUpgradeDataAsset> InUpgrade);
+	bool ArePreRequisitesUnlocked(UUpgradeDataAsset* InUpgrade);
 };

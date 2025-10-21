@@ -3,14 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Building/Buildable.h"
+#include "Building/Structure.h"
 #include "Turret.generated.h"
 
 class UArrowComponent;
 class UShootingComponent;
 
+// A Structure that shoots at enemies.
 UCLASS()
-class STRATEGYGAME_API ATurret : public ABuildable
+class STRATEGYGAME_API ATurret : public AStructure
 {
 	GENERATED_BODY()
 

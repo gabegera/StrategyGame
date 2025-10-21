@@ -33,7 +33,7 @@ void AAutomatedTurret::BeginPlay()
 
 void AAutomatedTurret::ScanForEnemies()
 {
-	if (BuildableState != EBuildableState::ConstructionComplete) return;
+	if (StructureState != EStructureState::ConstructionComplete) return;
 	
 	FVector TraceStart = SphereComponent->GetComponentLocation();
 	FVector TraceEnd = TraceStart;
