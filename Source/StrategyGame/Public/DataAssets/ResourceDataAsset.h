@@ -17,16 +17,16 @@ class STRATEGYGAME_API UResourceDataAsset : public UDataAsset
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintGetter=GetResourceName, Category="Resource")
-	FText ResourceName;
+	FText Name;
 
 	UPROPERTY(EditAnywhere, BlueprintGetter=GetResourceIcon, Category="Resource")
-	TSoftObjectPtr<UTexture2D> ResourceIcon;
+	TSoftObjectPtr<UTexture2D> Icon;
 
 public:
 
 	UFUNCTION(BlueprintPure, Category="Resource")
-	FText GetResourceName() const { return ResourceName; }
+	FText GetResourceName() const { return Name; }
 
 	UFUNCTION(BlueprintPure, Category="Resource")
-	TSoftObjectPtr<UTexture2D> GetResourceIcon() const { return ResourceIcon; }
+	TSoftObjectPtr<UTexture2D> GetResourceIcon() const { return Icon; }
 };

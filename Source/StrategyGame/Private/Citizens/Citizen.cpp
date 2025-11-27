@@ -3,8 +3,12 @@
 
 #include "Citizens/Citizen.h"
 
+#include "Building/Structure.h"
 #include "Citizens/CitizenAIController.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/HousingComponent.h"
+#include "Components/WorkersComponent.h"
+#include "Game/StrategyGameInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 
@@ -41,7 +45,77 @@ ACitizen::ACitizen()
 void ACitizen::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UStrategyGameInstance* GameInstance = GetGameInstance<UStrategyGameInstance>();
+	GameInstance->OnStructureBuilt.AddUniqueDynamic(this, &ThisClass::OnStructureBuilt);
+	GameInstance->OnStructureDestroyed.AddUniqueDynamic(this, &ThisClass::OnStructureDestroyed);
+	GameInstance->OnResidentRequested.AddUniqueDynamic(this, &ThisClass::OnResidentRequested);
+	GameInstance->OnWorkerRequested.AddUniqueDynamic(this, &ThisClass::OnWorkerRequested);
 	
+}
+
+void ACitizen::OnStructureBuilt(AStructure* NewStructure)
+{
+
+}
+
+void ACitizen::OnStructureDestroyed(AStructure* DestroyedStructure)
+{
+	if (Home == DestroyedStructure)
+	{
+		ClearHome();
+	}
+
+	if (Workplace == DestroyedStructure)
+	{
+		ClearWorkplace();
+	}
+}
+
+void ACitizen::OnResidentRequested(AStructure* StructureSource, UHousingComponent* Housing)
+{
+	if (IsHomeless())
+    {
+    	if (Housing && !Housing->IsFullCapacity())
+    	{
+    		AssignHome(StructureSource);
+    		Housing->AssignResident(this);
+    	}
+    }
+}
+
+void ACitizen::OnWorkerRequested(AStructure* StructureSource, UWorkersComponent* Workers, const ECitizenType RequestedCitizenType)
+{
+    if (Workers && CitizenType == RequestedCitizenType && !Workers->IsFullCapacity())
+    {
+    	AssignWorkplace(StructureSource);
+    	Workers->AssignWorker(this);
+    }
+}
+
+ECitizenType ACitizen::TryGetCitizenType_Implementation()
+{
+	return GetCitizenType();
+}
+
+ECitizenState ACitizen::TrySetCitizenState_Implementation(const ECitizenState InCitizenState)
+{
+	return SetCitizenState(InCitizenState);
+}
+
+ECitizenState ACitizen::TryGetCitizenState_Implementation()
+{
+	return GetCitizenState();
+}
+
+AStructure* ACitizen::TryGetHome_Implementation()
+{
+	return GetHome();
+}
+
+AStructure* ACitizen::TryGetWorkplace_Implementation()
+{
+	return GetWorkplace();
 }
 
 bool ACitizen::TryGetIsEmployed_Implementation()
@@ -52,6 +126,56 @@ bool ACitizen::TryGetIsEmployed_Implementation()
 bool ACitizen::TryGetIsHomeless_Implementation()
 {
 	return IsHomeless();
+}
+
+void ACitizen::TryToEnterStructure_Implementation(AStructure* TargetStructure)
+{
+	EnterStructure(TargetStructure);
+}
+
+void ACitizen::TryToExitStructure_Implementation()
+{
+	ExitStructure();
+}
+
+void ACitizen::ClearHome()
+{
+	Home = nullptr;
+	OnHomeCleared.Broadcast();
+}
+
+void ACitizen::ClearWorkplace()
+{
+	Workplace = nullptr;
+	OnWorkplaceCleared.Broadcast();
+}
+
+void ACitizen::EnterStructure(AStructure* TargetStructure)
+{
+	if (!TargetStructure) return;
+
+	SetActorHiddenInGame(true);
+	GetCharacterMovement()->GravityScale = 0.0f;
+	SetActorEnableCollision(false);
+	SetActorLocation(TargetStructure->GetActorLocation() + FVector::UpVector * GetCapsuleComponent()->GetLocalBounds().BoxExtent.Z);
+
+}
+
+void ACitizen::ExitStructure()
+{
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+	GetCharacterMovement()->GravityScale = 1.0f;
+}
+
+ECitizenState ACitizen::SetCitizenState(const ECitizenState InCitizenState)
+{
+	return CitizenState = InCitizenState;
+}
+
+ECitizenState ACitizen::GetCitizenState() const
+{
+	return CitizenState;
 }
 
 void ACitizen::SetCitizenType(const ECitizenType NewCitizenType)

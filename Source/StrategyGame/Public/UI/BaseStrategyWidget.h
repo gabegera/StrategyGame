@@ -8,7 +8,7 @@
 
 class UUpgradeDataAsset;
 class AStructure;
-class ARTSPlayerController;
+class AStrategyPlayerController;
 class ARTSCamera;
 class AStrategyGameState;
 class ACityDefenseGameMode;
@@ -20,13 +20,13 @@ class STRATEGYGAME_API UBaseStrategyWidget : public UUserWidget
 
 protected:
 
-	UPROPERTY(BlueprintGetter=GetRTSPlayerController, Category="Strategy Widget")
-	ARTSPlayerController* RTSPlayerController;
+	UPROPERTY(BlueprintGetter=GetStrategyPlayerController, Category="Strategy Widget")
+	AStrategyPlayerController* StrategyPlayerController;
 
 	virtual void NativeConstruct() override;
 
 public:
 
 	UFUNCTION(BlueprintGetter, Category="Strategy Widget|Getters")
-	ARTSPlayerController* GetRTSPlayerController() const { return RTSPlayerController; }
+	AStrategyPlayerController* GetStrategyPlayerController() const;
 };

@@ -3,24 +3,14 @@
 
 #include "StrategyStatics.h"
 
-#include "Citizens/Citizen.h"
-#include "Citizens/CitizenSpawn.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Building/Structure.h"
+#include "DataAssets/ResourceDataAsset.h"
 #include "Game/StrategyGameInstance.h"
-#include "Game/ResourcesSubsystem.h"
-#include "Kismet/GameplayStatics.h"
+#include "Turrets/RemoteControlTurret.h"
 
-UStrategyStatics::UStrategyStatics()
-{
-	ConstructorHelpers::FClassFinder<ACitizen> CitizenClassFinder(TEXT("/Game/Blueprints/AI/Citizens/BP_Citizen.BP_Citizen_C"));
-	if (CitizenClassFinder.Succeeded())
-	{
-		CitizenClassToSpawn = CitizenClassFinder.Class;
-	}
-	else
-	{
-		CitizenClassToSpawn = ACitizen::StaticClass();
-	}
-}
+class IAssetRegistry;
+class FAssetRegistryModule;
 
 int32 UStrategyStatics::GetGridSize(const UObject* WorldContextObject)
 {
@@ -33,35 +23,70 @@ int32 UStrategyStatics::GetGridSize(const UObject* WorldContextObject)
 	return 1;
 }
 
-void UStrategyStatics::SpawnCitizen(const UObject* WorldContextObject, ECitizenType CitizenType)
+TArray<UResourceDataAsset*> UStrategyStatics::GetAllResources()
 {
-	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
-	if (!World) return;
+	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	const IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
-	const ACitizenSpawn* CivilianSpawn = Cast<ACitizenSpawn>(UGameplayStatics::GetActorOfClass(World, ACitizenSpawn::StaticClass()));
-	FTransform SpawnTransform;
-	if (CivilianSpawn)
+	TArray<FAssetData> AssetDataList;
+	AssetRegistry.GetAssetsByClass(UResourceDataAsset::StaticClass()->GetClassPathName(), AssetDataList);
+
+	TArray<UResourceDataAsset*> OutArray;
+	for (const FAssetData& AssetData : AssetDataList)
 	{
-		SpawnTransform = CivilianSpawn->GetActorTransform();
+		OutArray.AddUnique(Cast<UResourceDataAsset>(AssetData.GetAsset()));
 	}
-	
-	ACitizen* NewCivilian = World->SpawnActorDeferred<ACitizen>(CitizenClassToSpawn, SpawnTransform);
-	NewCivilian->SetCitizenType(CitizenType);
-	NewCivilian->FinishSpawning(SpawnTransform);
+
+	return OutArray;
 }
 
-void UStrategyStatics::SpawnCitizensMulti(const UObject* WorldContextObject, const int32 NumOfWorkers, const int32 NumOfScientists)
+UResourceDataAsset* UStrategyStatics::GetResourceByName(const FString& InName)
 {
-	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
-	if (!World) return;
+	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	const IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
-	for (int32 i = 0; i < NumOfWorkers; i++)
+	TArray<FAssetData> AssetDataList;
+	AssetRegistry.GetAssetsByClass(UResourceDataAsset::StaticClass()->GetClassPathName(), AssetDataList);
+
+	for (const FAssetData& AssetData : AssetDataList)
 	{
-		SpawnCitizen(World, ECitizenType::Worker);
+		UResourceDataAsset* Resource = Cast<UResourceDataAsset>(AssetData.GetAsset());
+		if (Resource->GetResourceName().ToString().ToLower() == InName.ToLower())
+		{
+			return Resource;
+		}
 	}
 
-	for (int32 i = 0; i < NumOfScientists; i++)
+	return nullptr;
+}
+
+TSet<TSubclassOf<AStructure>> UStrategyStatics::GetAllStructureClasses()
+{
+	TArray<UClass*> DerivedClasses;
+	GetDerivedClasses(AStructure::StaticClass(), DerivedClasses);
+
+	TSet<TSubclassOf<AStructure>> OutSet;
+	for (UClass* Class : DerivedClasses)
 	{
-		SpawnCitizen(World, ECitizenType::Scientist);
+		if (!Class->IsNative() && !Class->IsChildOf(ARemoteControlTurret::StaticClass()))
+		{
+			OutSet.Add(Class);
+		}
 	}
+
+	return OutSet;
+
+	// const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	// const IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+	//
+	// TArray<FAssetData> AssetDataList;
+	// AssetRegistry.GetAssetsByClass(AStructure::StaticClass()->GetClassPathName(), AssetDataList);
+	//
+	// TSet<TSubclassOf<AStructure>> OutSet;
+	// for (const FAssetData& AssetData : AssetDataList)
+	// {
+	// 	OutSet.Add(AssetData.GetClass());
+	// }
+	//
+	// return OutSet;
 }

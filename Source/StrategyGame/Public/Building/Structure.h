@@ -23,15 +23,16 @@ enum class EStructureState : uint8
 UENUM(BlueprintType, DisplayName="Structure Category")
 enum class EStructureCategory : uint8
 {
-	Miscellaneous			= 0		UMETA(DisplayName="Miscellaneous"),	
+	Miscellaneous			= 0		UMETA(DisplayName="Miscellaneous"),
 	Housing					= 1		UMETA(DisplayName="Housing"),
 	ResourceGeneration		= 2		UMETA(DisplayName="Resource Generation"),
 	Storage					= 3		UMETA(DisplayName="Storage"),
 	Defenses				= 4		UMETA(DisplayName="Defenses"),
+	Power					= 5		UMETA(DisplayName="Power"),
 };
 
 // The base class for any actor that can be built in RTS Mode.
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API AStructure : public ACustomActor, public IStructureInterface
 {
 	GENERATED_BODY()
@@ -52,6 +53,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite, Category="Structure|Components")
 	UBoxComponent* BuildingBounds;
+
+	UPROPERTY(EditAnywhere)
+	UArrowComponent* StructureEntranceArrow;
 
 	UPROPERTY(EditAnywhere)
 	ULookAtCameraTextRenderComponent* LookAtCameraTextRenderComponent;
@@ -112,6 +116,8 @@ protected:
 	void RefundConstructionMaterials();
 	
 	virtual void CompleteConstruction();
+	
+	virtual void DestroyStructure();
 
 	// Changes the mesh material depending on if the structure is being placed, is being constructed, or is unable to be built.
 	virtual void UpdateBuildMaterials();
@@ -135,6 +141,16 @@ public:
 	virtual bool TrySelect(ARTSCamera* SelectInstigator) override;
 
 	virtual bool TryRecycle(ARTSCamera* DestroyInstigator) override;
+
+	virtual bool DoesIncreaseStorage() override;
+
+	virtual bool DoesGenerateResources() override;
+
+	virtual bool DoesHarvestResources() override;
+
+	virtual bool DoesProvideHousing() override;
+
+	virtual bool DoesRequireWorkers() override;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void MoveBuilding(FVector NewLocation);
@@ -165,8 +181,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UStaticMeshComponent* GetStaticMeshComponent() { return StaticMeshComponent; }
 
+	UFUNCTION(BlueprintPure, Category="Structure")
+	FVector GetEntranceLocation() const;
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	EStructureState GetStructureState() { return StructureState; }
+	EStructureState GetStructureState() const;
 
 	UFUNCTION(BlueprintCallable)
 	EStructureState SetStructureState(EStructureState NewMode);

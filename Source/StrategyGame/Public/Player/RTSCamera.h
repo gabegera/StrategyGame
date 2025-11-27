@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Building/Structure.h"
 #include "Camera/CameraComponent.h"
-#include "Player/RTSPlayerController.h"
+#include "Player/StrategyPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interfaces/StructureInterface.h"
@@ -33,7 +33,7 @@ public:
 
 protected:
 
-	UPROPERTY() ARTSPlayerController* RTSPlayerController = nullptr;
+	UPROPERTY() AStrategyPlayerController* RTSPlayerController = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* SceneComponent = nullptr;
@@ -146,7 +146,7 @@ public:
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ARTSPlayerController* GetPlayerController();
+	AStrategyPlayerController* GetPlayerController();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	AStructure* GetSelectedStructure() { return SelectedStructure; }

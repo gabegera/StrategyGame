@@ -7,7 +7,7 @@
 #include "Interactables/InteractableObject.h"
 #include "RemoteTurretSeat.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API ARemoteTurretSeat : public AInteractableObject
 {
 	GENERATED_BODY()

@@ -10,7 +10,7 @@ class UArrowComponent;
 class UShootingComponent;
 
 // A Structure that shoots at enemies.
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API ATurret : public AStructure
 {
 	GENERATED_BODY()

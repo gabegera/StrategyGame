@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "StructureComponent.h"
 #include "ResourceStorageComponent.generated.h"
 
 class UResourceDataAsset;
 
 UCLASS(ClassGroup=StructureComponents)
-class STRATEGYGAME_API UResourceStorageComponent : public UActorComponent
+class STRATEGYGAME_API UResourceStorageComponent : public UStructureComponent
 {
 	GENERATED_BODY()
 
@@ -25,7 +25,14 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	virtual void OnStructureBuilt(AStructure* BuiltStructure) override;
+
+	virtual void OnStructureDestroyed(AStructure* DestroyedStructure) override;
+
 public:
+
+	UFUNCTION(BlueprintPure, Category="Resource Storage")
+	TMap<UResourceDataAsset*, int32>& GetResourcesToIncreaseStorage();
 
 	UFUNCTION(BlueprintPure, Category="Resource Storage")
 	TArray<UResourceDataAsset*> GetStorageResources() const;

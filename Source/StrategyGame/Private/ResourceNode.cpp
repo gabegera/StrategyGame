@@ -3,6 +3,8 @@
 
 #include "ResourceNode.h"
 
+#include "Components/LookAtCameraTextRenderComponent.h"
+
 
 // Sets default values
 AResourceNode::AResourceNode()
@@ -17,11 +19,6 @@ AResourceNode::AResourceNode()
 	StaticMesh->SetupAttachment(SceneComponent);
 	StaticMesh->SetCollisionProfileName("SelectableObject");
 	StaticMesh->SetGenerateOverlapEvents(true);
-
-	Sphere = CreateDefaultSubobject<USphereComponent>("Trigger");
-	Sphere->SetupAttachment(StaticMesh);
-	Sphere->SetCollisionProfileName("Trigger");
-	Sphere->SetSphereRadius(2000.0f);
 }
 
 // Called when the game starts or when spawned
@@ -31,28 +28,42 @@ void AResourceNode::BeginPlay()
 	
 }
 
-// Called every frame
-void AResourceNode::Tick(float DeltaTime)
+float AResourceNode::TryDrainResource(const float DrainAmount)
 {
-	Super::Tick(DeltaTime);
+	return DrainResource(DrainAmount);
 }
 
-void AResourceNode::DrainResource(int32 DecreaseAmount)
+UResourceDataAsset* AResourceNode::TryGetResourceType()
 {
-	ResourceAmount = FMath::Clamp(ResourceAmount - DecreaseAmount, 0, ResourceAmount);
+	return GetResourceType();
+}
+
+float AResourceNode::TryGetResourceAmount()
+{
+	return GetResourceAmount();
+}
+
+float AResourceNode::DrainResource(const float DrainAmount)
+{
+	const float AmountBeforeDrain = ResourceAmount;
+	ResourceAmount = FMath::Clamp(ResourceAmount - DrainAmount, 0.0f, ResourceAmount);
+	const float AmountDrained = AmountBeforeDrain - ResourceAmount;
 
 	if (ResourceAmount <= 0)
 	{
 		Destroy();
 	}
+
+	return AmountDrained;
 }
 
-void AResourceNode::SetAssignedExtractor(AStructure* NewExtractor)
+float AResourceNode::GetResourceAmount() const
 {
-	if (GetAssignedExtractor())
-	{
-		GEngine->AddOnScreenDebugMessage(960, 3.0f, FColor::Red, "Cannot assign new extractor, there is already one assigned.");
-	}
-	else AssignedExtractor = NewExtractor;
+	return ResourceAmount;
+}
+
+UResourceDataAsset* AResourceNode::GetResourceType() const
+{
+	return ResourceType;
 }
 

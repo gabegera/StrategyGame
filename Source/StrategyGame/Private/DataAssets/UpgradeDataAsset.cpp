@@ -3,15 +3,30 @@
 
 #include "DataAssets/UpgradeDataAsset.h"
 
-#include "Game/UpgradesSubsystem.h"
+#include "Game/UnlocksSubsystem.h"
 
+
+FString UUpgradeDataAsset::GetTitle() const
+{
+	return Title;
+}
+
+FString UUpgradeDataAsset::GetDescription() const
+{
+	return Description;
+}
 
 bool UUpgradeDataAsset::IsUnlocked()
 {
-	return GetWorld()->GetGameInstance()->GetSubsystem<UUpgradesSubsystem>()->IsUpgradeUnlocked(this);
+	return GetWorld()->GetGameInstance()->GetSubsystem<UUnlocksSubsystem>()->IsUpgradeUnlocked(this);
 }
 
 bool UUpgradeDataAsset::ArePreRequisitesUnlocked()
 {
-	return GetWorld()->GetGameInstance()->GetSubsystem<UUpgradesSubsystem>()->ArePreRequisitesUnlocked(this);
+	return GetWorld()->GetGameInstance()->GetSubsystem<UUnlocksSubsystem>()->ArePreRequisitesUnlocked(this);
+}
+
+int32 UUpgradeDataAsset::GetResearchPointCost() const
+{
+	return ResearchPointCost;
 }

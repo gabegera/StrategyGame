@@ -7,7 +7,7 @@
 #include "House.generated.h"
 
 // A Structure that includes a Housing Component.
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API AHouse : public AStructure
 {
 	GENERATED_BODY()

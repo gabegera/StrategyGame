@@ -8,6 +8,16 @@ void USquadManager::SpawnSquadMembers()
 	
 }
 
+void USquadManager::OnSquadMemberTookDamage()
+{
+
+}
+
+void USquadManager::OnSquadMemberDied()
+{
+
+}
+
 void USquadManager::SetAttackTarget(AActor* Target)
 {
 	if (SquadMembers.IsEmpty()) return;

@@ -27,7 +27,7 @@ void ATurret::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	MuzzleLocations.Empty();
-    GetComponents<UArrowComponent>(MuzzleLocations);
+	GetComponents<UArrowComponent>(MuzzleLocations);
 	for (UArrowComponent* Muzzle : MuzzleLocations)
 	{
 		if (!Muzzle->IsAttachedTo(TurretMesh))

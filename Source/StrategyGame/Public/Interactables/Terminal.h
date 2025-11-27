@@ -92,7 +92,7 @@ public:
 protected:
 
 	// The component that renders the terminal UI.
-	UPROPERTY(EditAnywhere, BlueprintGetter=GetScreenWidget, Category="Terminal|Components", meta=(AllowedClasses="UTerminalScreenWidget"))
+	UPROPERTY(EditAnywhere, BlueprintGetter=GetScreenWidget, Category="Terminal|Components")
 	UWidgetComponent* ScreenWidget;
 
 	// The camera that will be looking at the terminal when interacted with.

@@ -3,14 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "StructureComponent.h"
 #include "ResourceGenerationComponent.generated.h"
 
+class UWorkersComponent;
 class UResourceDataAsset;
 class UResourcesSubsystem;
 
 UCLASS(ClassGroup=StructureComponents)
-class STRATEGYGAME_API UResourceGenerationComponent : public UActorComponent
+class STRATEGYGAME_API UResourceGenerationComponent : public UStructureComponent
 {
 	GENERATED_BODY()
 
@@ -21,8 +22,12 @@ public:
 protected:
 
 	UPROPERTY()
+	UWorkersComponent* OwningStructureWorkersComponent;
+
+	UPROPERTY()
 	UResourcesSubsystem* ResourcesSubsystem;
-	
+
+	// How much of each listed resource to generate each hour when at 100% worker capacity.
 	UPROPERTY(EditAnywhere, Category="Resource Generation")
 	TMap<UResourceDataAsset*, float> ResourcesToGeneratePerHour;
 
@@ -30,17 +35,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Resource Generation")
 	bool bCostsResources = false;
 
+	// How much of each listed resource to consume each hour when at 100% worker capacity.
 	UPROPERTY(EditAnywhere, Category="Resource Generation", meta=(EditCondition=bCostsResources, EditConditionHides))
 	TMap<UResourceDataAsset*, float> ResourcesToConsumePerHour;
 	
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	UFUNCTION()
-	void OnTimePassed(float HoursPassed);
-
-	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnTimePassed", Category="Resource Generation")
-	void ReactToOnTimePassed(float HoursPassed);
+	virtual void OnTimePassed(float HoursPassed) override;
 	
 	void GenerateResources(float HoursPassed);
 
@@ -53,10 +55,10 @@ public:
 	TArray<UResourceDataAsset*> GetGeneratedResources() const;
 
 	UFUNCTION(BlueprintPure, Category="Resource Generation")
-	float GetGeneratedResourceAmount(const UResourceDataAsset* InResource) const {return ResourcesToGeneratePerHour.FindRef(InResource); }
+	float GetGeneratedResourceAmount(const UResourceDataAsset* InResource) const;
 
 	UFUNCTION(BlueprintPure, Category="Resource Generation")
-	bool GetCostsResources() const { return bCostsResources; }
+	bool GetCostsResources() const;
 
 	UFUNCTION(BlueprintPure, Category="Resource Generation")
 	bool HasEnoughResourcesToConsume(float HoursPassed) const;

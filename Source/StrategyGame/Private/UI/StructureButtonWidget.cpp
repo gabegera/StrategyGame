@@ -7,6 +7,8 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Game/StrategyGameInstance.h"
+#include "Game/UnlocksSubsystem.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 void UStructureButtonWidget::NativePreConstruct()
 {
@@ -31,17 +33,40 @@ void UStructureButtonWidget::NativeConstruct()
 
 void UStructureButtonWidget::OnButtonClicked()
 {
-	FTransform SpawnTransform = FTransform(FVector::ZeroVector);
-	AStructure* SpawnedStructure = GetWorld()->SpawnActorDeferred<AStructure>(AssignedStructure, SpawnTransform);
-	SpawnedStructure->SetStructureState(EStructureState::BeingPlaced);
-	SpawnedStructure->FinishSpawning(SpawnTransform);
-	
-	GetGameInstance<UStrategyGameInstance>()->OnStructureSelected.Broadcast(SpawnedStructure);
+	if (IsRequiredUpgradeUnlocked())
+	{
+		FTransform SpawnTransform = FTransform(FVector::ZeroVector);
+		AStructure* SpawnedStructure = GetWorld()->SpawnActorDeferred<AStructure>(AssignedStructure, SpawnTransform);
+		SpawnedStructure->SetStructureState(EStructureState::BeingPlaced);
+		SpawnedStructure->FinishSpawning(SpawnTransform);
+
+		GetGameInstance<UStrategyGameInstance>()->OnStructureSelected.Broadcast(SpawnedStructure);
+	}
+	else
+	{
+		UKismetSystemLibrary::PrintString(GetWorld(), "The Upgrade: " + RequiredUpgrade->GetTitle() + " is required.");
+	}
+
 }
 
 TSubclassOf<AStructure> UStructureButtonWidget::GetAssignedStructure()
 {
 	return AssignedStructure;
+}
+
+UUpgradeDataAsset* UStructureButtonWidget::GetRequiredUpgrade() const
+{
+	return RequiredUpgrade;
+}
+
+bool UStructureButtonWidget::IsRequiredUpgradeUnlocked() const
+{
+	if (RequiredUpgrade)
+	{
+		return GetGameInstance()->GetSubsystem<UUnlocksSubsystem>()->IsUpgradeUnlocked(RequiredUpgrade);
+	}
+
+	return true;
 }
 
 void UStructureButtonWidget::SetAssignedStructure(TSubclassOf<AStructure> InStructureClass)

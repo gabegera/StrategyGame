@@ -7,7 +7,7 @@
 #include "ResourceStorage.generated.h"
 
 // A Structure that includes a Resource Storage Component.
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API AResourceStorage : public AStructure
 {
 	GENERATED_BODY()

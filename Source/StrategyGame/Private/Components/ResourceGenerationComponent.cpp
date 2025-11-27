@@ -3,6 +3,8 @@
 
 #include "Components/ResourceGenerationComponent.h"
 
+#include "Building/Structure.h"
+#include "Components/WorkersComponent.h"
 #include "Game/ResourcesSubsystem.h"
 #include "Game/TimeSubsystem.h"
 
@@ -21,34 +23,42 @@ void UResourceGenerationComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (OwningStructure)
+	{
+		OwningStructureWorkersComponent = OwningStructure->GetComponentByClass<UWorkersComponent>();
+	}
+
 	ResourcesSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UResourcesSubsystem>();
 	GetWorld()->GetGameInstance()->GetSubsystem<UTimeSubsystem>()->OnTimePassed.AddUniqueDynamic(this, &ThisClass::OnTimePassed);
 }
 
-void UResourceGenerationComponent::OnTimePassed(float HoursPassed)
+void UResourceGenerationComponent::OnTimePassed(const float HoursPassed)
 {
-	ReactToOnTimePassed(HoursPassed);
+	if (!IsActive()) return;
 
-	GenerateResources(HoursPassed);
-}
-
-void UResourceGenerationComponent::GenerateResources(float HoursPassed)
-{
-	if (!ConsumeResources(HoursPassed)) return;
-	
-	for (const TPair ResourceGenerated : ResourcesToGeneratePerHour)
+	if (ConsumeResources(HoursPassed))
 	{
-		ResourcesSubsystem->AddResources(ResourceGenerated.Key, ResourceGenerated.Value * HoursPassed);
+		GenerateResources(HoursPassed);
 	}
 }
 
-bool UResourceGenerationComponent::ConsumeResources(float HoursPassed)
+void UResourceGenerationComponent::GenerateResources(const float HoursPassed)
+{
+	for (const TPair ResourceGenerated : ResourcesToGeneratePerHour)
+	{
+		const float AmountToGenerate = ResourceGenerated.Value * OwningStructureWorkersComponent->GetWorkersPercentage() * HoursPassed;
+		ResourcesSubsystem->AddResources(ResourceGenerated.Key, AmountToGenerate);
+	}
+}
+
+bool UResourceGenerationComponent::ConsumeResources(const float HoursPassed)
 {
 	if (!HasEnoughResourcesToConsume(HoursPassed)) return false;
 	
 	for (const TPair ResourceConsumed : ResourcesToConsumePerHour)
 	{
-		ResourcesSubsystem->ConsumeResources(ResourceConsumed.Key, ResourceConsumed.Value * HoursPassed);
+		const float AmountToConsume = ResourceConsumed.Value * OwningStructureWorkersComponent->GetWorkersPercentage() * HoursPassed;
+		ResourcesSubsystem->ConsumeResources(ResourceConsumed.Key, AmountToConsume);
 	}
 
 	return true;
@@ -61,7 +71,17 @@ TArray<UResourceDataAsset*> UResourceGenerationComponent::GetGeneratedResources(
 	return OutArray;
 }
 
-bool UResourceGenerationComponent::HasEnoughResourcesToConsume(float HoursPassed) const
+float UResourceGenerationComponent::GetGeneratedResourceAmount(const UResourceDataAsset* InResource) const
+{
+	return ResourcesToGeneratePerHour.FindRef(InResource);
+}
+
+bool UResourceGenerationComponent::GetCostsResources() const
+{
+	return bCostsResources;
+}
+
+bool UResourceGenerationComponent::HasEnoughResourcesToConsume(const float HoursPassed) const
 {
 	for (const TPair ResourceToConsume : ResourcesToConsumePerHour)
 	{

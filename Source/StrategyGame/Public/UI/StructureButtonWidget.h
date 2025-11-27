@@ -28,6 +28,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintGetter=GetAssignedStructure, Category="Structure Button", meta=(ExposeOnSpawn))
 	TSubclassOf<AStructure> AssignedStructure;
 
+	UPROPERTY(EditAnywhere, BlueprintGetter=GetRequiredUpgrade, Category="Structure Button", meta=(ExposeOnSpawn))
+	UUpgradeDataAsset* RequiredUpgrade;
+
 	virtual void NativePreConstruct() override;
 
 	virtual void NativeConstruct() override;
@@ -39,6 +42,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Structure Button")
 	TSubclassOf<AStructure> GetAssignedStructure();
+
+	UFUNCTION(BlueprintPure, Category="Structure Button")
+	UUpgradeDataAsset* GetRequiredUpgrade() const;
+
+	UFUNCTION(BlueprintPure, Category="Structure Button")
+	bool IsRequiredUpgradeUnlocked() const;
 
 	UFUNCTION(BlueprintCallable, Category="Structure Button")
 	void SetAssignedStructure(TSubclassOf<AStructure> InStructureClass);

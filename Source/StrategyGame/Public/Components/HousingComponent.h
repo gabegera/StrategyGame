@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "StructureComponent.h"
 #include "HousingComponent.generated.h"
 
 
 class ACitizen;
 
 UCLASS(ClassGroup=(StructureComponents))
-class STRATEGYGAME_API UHousingComponent : public UActorComponent
+class STRATEGYGAME_API UHousingComponent : public UStructureComponent
 {
 	GENERATED_BODY()
 
@@ -29,7 +29,11 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	virtual void OnStructureBuilt(AStructure* BuiltStructure) override;
+
 public:
+
+	virtual void RequestResidents();
 
 	UFUNCTION(BlueprintCallable, Category="Housing")
 	void AssignResident(ACitizen* NewResident);
@@ -38,8 +42,11 @@ public:
 	TArray<ACitizen*>& GetResidents();
 
 	UFUNCTION(BlueprintPure, Category="Housing")
-	bool IsFullCapacity();
+	int32 GetHousingCapacity() const;
 
 	UFUNCTION(BlueprintPure, Category="Housing")
-	int32 GetNumAvailableResidents();
+	bool IsFullCapacity() const;
+
+	UFUNCTION(BlueprintPure, Category="Housing")
+	int32 GetNumAvailableResidents() const;
 };

@@ -5,10 +5,18 @@
 
 #include "Building/BuildExclusionZone.h"
 #include "ResourceNode.h"
+#include "Components/ArrowComponent.h"
+#include "Components/HousingComponent.h"
 #include "Components/LookAtCameraTextRenderComponent.h"
+#include "Components/ResourceGenerationComponent.h"
+#include "Components/ResourceHarvestingComponent.h"
+#include "Components/ResourceStorageComponent.h"
+#include "Components/WorkersComponent.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
+#include "Game/ResourcesSubsystem.h"
 #include "Game/StrategyGameInstance.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "NavAreas/NavArea_Obstacle.h"
 #include "Player/RTSCamera.h"
 
@@ -35,8 +43,16 @@ AStructure::AStructure()
 	BuildingBounds->SetAreaClassOverride(UNavArea_Obstacle::StaticClass());
 	BuildingBounds->SetCanEverAffectNavigation(true);
 
+	StructureEntranceArrow = CreateDefaultSubobject<UArrowComponent>("Entrance");
+	StructureEntranceArrow->SetupAttachment(StaticMeshComponent);
+	StructureEntranceArrow->SetArrowSize(2.5f);
+	StructureEntranceArrow->SetArrowLength(20.0f);
+	StructureEntranceArrow->SetRelativeLocation(FVector(250.0f, 0.0f, 0.0f));
+
 	LookAtCameraTextRenderComponent = CreateDefaultSubobject<ULookAtCameraTextRenderComponent>("Structure Name");
 	LookAtCameraTextRenderComponent->SetupAttachment(BuildingBounds);
+	LookAtCameraTextRenderComponent->SetWorldSize(256.0f);
+	LookAtCameraTextRenderComponent->SetHorizontalAlignment(EHTA_Center);
 	
 	ConstructorHelpers::FObjectFinder<UMaterialInstance> CanBuildMaterialFinder(TEXT("/Game/Assets/Structures/ConstructionMaterials/MI_CanBuild.MI_CanBuild"));
 	if (CanBuildMaterialFinder.Succeeded())
@@ -124,6 +140,9 @@ void AStructure::OnConstruction(const FTransform& Transform)
 
 	LookAtCameraTextRenderComponent->SetRelativeLocation(FVector::UpVector * BuildingBounds->GetScaledBoxExtent().Z);
 	LookAtCameraTextRenderComponent->SetText(StructureName);
+
+	const FRotator EntranceLookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetEntranceLocation(), SceneComponent->GetComponentLocation());
+	StructureEntranceArrow->SetWorldRotation(EntranceLookAtRotation);
 }
 
 void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -172,7 +191,37 @@ bool AStructure::TryRecycle(ARTSCamera* DestroyInstigator)
 	return true;
 }
 
-void AStructure::MoveBuilding(FVector NewLocation)
+bool AStructure::DoesIncreaseStorage()
+{
+	const UResourceStorageComponent* ResourceStorageComponent = GetComponentByClass<UResourceStorageComponent>();
+	return ResourceStorageComponent && !ResourceStorageComponent->GetStorageResources().IsEmpty();
+}
+
+bool AStructure::DoesGenerateResources()
+{
+	const UResourceGenerationComponent* ResourceGenerationComponent = GetComponentByClass<UResourceGenerationComponent>();
+	return ResourceGenerationComponent && !ResourceGenerationComponent->GetGeneratedResources().IsEmpty();
+}
+
+bool AStructure::DoesHarvestResources()
+{
+	const UResourceHarvestingComponent* ResourceHarvestingComponent = GetComponentByClass<UResourceHarvestingComponent>();
+	return ResourceHarvestingComponent && !ResourceHarvestingComponent->GetHarvestingResources().IsEmpty();
+}
+
+bool AStructure::DoesProvideHousing()
+{
+	const UHousingComponent* HousingComponent = GetComponentByClass<UHousingComponent>();
+	return HousingComponent && HousingComponent->GetHousingCapacity() > 0;
+}
+
+bool AStructure::DoesRequireWorkers()
+{
+	const UWorkersComponent* WorkersComponent = GetComponentByClass<UWorkersComponent>();
+	return WorkersComponent && WorkersComponent->GetMaxNumOfWorkers() > 0;
+}
+
+void AStructure::MoveBuilding(const FVector NewLocation)
 {
 	SetActorLocation(NewLocation);
 }
@@ -238,13 +287,16 @@ void AStructure::CompleteConstruction()
 	GetGameInstance<UStrategyGameInstance>()->OnStructureBuilt.Broadcast(this);
 }
 
+void AStructure::DestroyStructure()
+{
+	GetGameInstance<UStrategyGameInstance>()->OnStructureDestroyed.Broadcast(this);
+	Destroy();
+}
+
 void AStructure::Recycle()
 {
 	RefundConstructionMaterials();
-	
-	GetGameInstance<UStrategyGameInstance>()->OnStructureDestroyed.Broadcast();
-
-	Destroy();
+	DestroyStructure();
 }
 
 void AStructure::UpdateBuildMaterials()
@@ -317,6 +369,16 @@ void AStructure::OnMeshLoaded(const TSoftObjectPtr<UStaticMesh> LoadedMesh) cons
 	if (!LoadedMesh.IsValid()) return;
 
 	StaticMeshComponent->SetStaticMesh(LoadedMesh.Get());
+}
+
+FVector AStructure::GetEntranceLocation() const
+{
+	return StructureEntranceArrow->GetComponentLocation();
+}
+
+EStructureState AStructure::GetStructureState() const
+{
+	return StructureState;
 }
 
 EStructureState AStructure::SetStructureState(EStructureState NewMode)

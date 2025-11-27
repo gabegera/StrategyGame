@@ -6,7 +6,7 @@
 #include "Turret.h"
 #include "RemoteControlTurret.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API ARemoteControlTurret : public ATurret
 {
 	GENERATED_BODY()

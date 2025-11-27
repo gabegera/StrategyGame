@@ -7,6 +7,8 @@
 #include "GameFramework/Actor.h"
 #include "CitizenSpawn.generated.h"
 
+class ACitizen;
+
 UCLASS(NotBlueprintable)
 class STRATEGYGAME_API ACitizenSpawn : public AActor
 {
@@ -23,7 +25,17 @@ protected:
 
 	UPROPERTY()
 	UBillboardComponent* BillboardComponent;
+
+	UPROPERTY(EditAnywhere, Category="CitizenSpawn")
+	TSubclassOf<ACitizen> CitizenClassToSpawn;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+public:
+
+	UFUNCTION(BlueprintCallable, Category="CitizenSpawn")
+	void SpawnCitizensInGrid(int32 NumOfWorkers, int32 NumOfScientists);
 };

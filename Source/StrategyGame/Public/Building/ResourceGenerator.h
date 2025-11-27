@@ -7,7 +7,7 @@
 #include "ResourceGenerator.generated.h"
 
 // A Structure that includes a Resource Generation Component.
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API AResourceGenerator : public AStructure
 {
 	GENERATED_BODY()
@@ -20,6 +20,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Structure|Components")
 	class UResourceGenerationComponent* ResourceGenerationComponent;
+
+	UPROPERTY(EditAnywhere, Category="Structure|Components")
+	class UWorkersComponent* WorkersComponent;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

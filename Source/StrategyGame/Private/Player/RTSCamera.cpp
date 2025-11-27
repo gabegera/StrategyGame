@@ -8,6 +8,7 @@
 #include "Player/PlayerCharacter.h"
 #include "Game/CityDefenseGameMode.h"
 #include "Game/TimeSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 ARTSCamera::ARTSCamera()
@@ -258,11 +259,11 @@ FVector ARTSCamera::SnapVectorToGrid(FVector InputPos, int32 GridSize)
 	return Output;
 }
 
-ARTSPlayerController* ARTSCamera::GetPlayerController()
+AStrategyPlayerController* ARTSCamera::GetPlayerController()
 {
 	if (RTSPlayerController == nullptr)
 	{
-		RTSPlayerController = Cast<ARTSPlayerController>(GetController());
+		RTSPlayerController = Cast<AStrategyPlayerController>(GetController());
 	}
 
 	return RTSPlayerController;

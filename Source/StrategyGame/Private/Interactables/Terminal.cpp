@@ -49,7 +49,7 @@ void ATerminal::OnInteract(APlayerCharacter* InteractInstigator)
 
 	if (InteractInstigator && InteractInstigator->GetPlayerController())
 	{
-		ARTSPlayerController* PlayerController = InteractInstigator->GetPlayerController();
+		AStrategyPlayerController* PlayerController = InteractInstigator->GetPlayerController();
 		
 		PlayerController->SetControllerMode(EControllerMode::Terminal);
 		PlayerController->SetViewTargetWithBlend(this, 1.0f, VTBlend_EaseInOut, 2);
@@ -109,7 +109,7 @@ void ATerminal::OnCommandLineTextCommited(const FText& InText, ETextCommit::Type
 
 	if (InString == "exit")
 	{
-		ARTSPlayerController* PlayerController = Cast<ARTSPlayerController>(GetWorld()->GetFirstPlayerController());
+		AStrategyPlayerController* PlayerController = Cast<AStrategyPlayerController>(GetWorld()->GetFirstPlayerController());
 
 		checkf(PlayerController,  TEXT("ARTSPlayerController is null. ATerminal::OnCommandLineTextCommited."))
 

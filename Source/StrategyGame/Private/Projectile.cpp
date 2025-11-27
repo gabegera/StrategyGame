@@ -50,6 +50,9 @@ void AProjectile::CheckCollision()
 	ProjectileHitString.Append(Hit.GetActor()->GetName());
 	GEngine->AddOnScreenDebugMessage(20, 3.0f, FColor::Red, ProjectileHitString);
 
+	Hit.GetActor()->TakeDamage(Damage, FPointDamageEvent(), GetInstigatorController(), GetInstigator());
+	if (!Hit.GetActor()) return;
+
 	if (UStaticMeshComponent* HitStaticMesh = Hit.GetActor()->GetComponentByClass<UStaticMeshComponent>())
 	{
 		if (HitStaticMesh->IsSimulatingPhysics())
@@ -65,8 +68,6 @@ void AProjectile::CheckCollision()
 			HitSkeletalMesh->AddImpulseAtLocation(GetVelocity() * KnockbackForceMultiplier, Hit.ImpactPoint, Hit.BoneName);
 		}
 	}
-
-	Hit.GetActor()->TakeDamage(Damage, FPointDamageEvent(), GetInstigatorController(), GetInstigator());
 	
 	Destroy();
 }

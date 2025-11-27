@@ -6,11 +6,16 @@
 #include "Engine/DataAsset.h"
 #include "UpgradeDataAsset.generated.h"
 
+class AEquippableItem;
+class AStructure;
+
 UENUM(BlueprintType)
 enum class EUpgradeType : uint8
 {
-	UnlockStructure = 0						UMETA(DisplayName="Unlock Structure"),
-	UnlockPlayerEquipment = 1				UMETA(DisplayName="Unlock Player Equipment"),
+	UnlockStructure = 0				UMETA(DisplayName="Unlock Structure"),
+	UnlockPlayerEquipment = 1		UMETA(DisplayName="Unlock Player Equipment"),
+	ChangeStructureProperties = 2	UMETA(DisplayName="Change Structure Properties"),
+	ChangeEquipmentProperties = 3	UMETA(DisplayName="Change Equipment Properties")
 };
 
 /**
@@ -30,21 +35,26 @@ protected:
 	FString Description;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgrade Data")
+	TSoftObjectPtr<UTexture2D> Icon;
+
+	// How many research points it costs to unlock this upgrade.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgrade Data", meta=(ClampMin=1))
+	int32 ResearchPointCost = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgrade Data")
 	EUpgradeType UpgradeType;
-
-	// Either a new structure being unlocked or the structure that is getting an upgrade.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgrade Data", meta=(EditCondition="UpgradeType != EUpgradeType::UnlockPlayerEquipment", EditConditionHides))
-	TSoftClassPtr<class AStructure> TargetStructure;
-
-	// Either a new equippable being unlocked or the equippable that is getting an upgrade.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Upgrade Data", meta=(EditCondition="UpgradeType == EUpgradeType::UnlockPlayerEquipment", EditConditionHides))
-	TSoftClassPtr<class AEquippableItem> TargetEquippable;
 
 	// The upgrades that are required to be unlocked before this one.
 	UPROPERTY(EditAnywhere, Category = "Upgrade Data")
 	TSet<UUpgradeDataAsset*> PreRequisiteUpgrades;
 
 public:
+
+	UFUNCTION(BlueprintPure, Category="Upgrade Data")
+	FString GetTitle() const;
+
+	UFUNCTION(BlueprintPure, Category="Upgrade Data")
+	FString GetDescription() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Upgrade Data")
 	bool IsUnlocked();
@@ -55,9 +65,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Upgrade Data")
 	EUpgradeType GetUpgradeType() const { return UpgradeType; }
 
-	UFUNCTION(BlueprintPure, Category="Upgrade Data")
-	TSoftClassPtr<AStructure> GetTargetStructure() const { return TargetStructure; }
-
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Upgrade Data")
 	TSet<UUpgradeDataAsset*>& GetPreRequisites() { return PreRequisiteUpgrades; }
+
+	UFUNCTION(BlueprintPure, Category="Upgrade Data")
+	int32 GetResearchPointCost() const;
 };

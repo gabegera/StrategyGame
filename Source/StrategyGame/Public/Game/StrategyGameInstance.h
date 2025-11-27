@@ -6,12 +6,19 @@
 #include "Engine/GameInstance.h"
 #include "StrategyGameInstance.generated.h"
 
+class UWorkersComponent;
+class UHousingComponent;
+struct FStructureSave;
+class USaveGame;
+enum class ECitizenType : uint8;
 class AStructure;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureBuiltSignature, AStructure*, NewStructure);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStructureDestroyedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureDestroyedSignature, AStructure*, DestroyedStructure);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureSelectedSignature, AStructure*, SelectedStructure);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStructureDeSelectedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FResidentRequestedSignature, AStructure*, Home, UHousingComponent*, Housing);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FWorkerRequestedSignature, AStructure*, Workplace, UWorkersComponent*, WorkersComponent, ECitizenType, WorkerType);
 
 /**
  * 
@@ -25,11 +32,16 @@ class STRATEGYGAME_API UStrategyGameInstance : public UGameInstance
 	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance")
 	uint16 GridSize = 500;
 
-	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance")
-	TSet<TSubclassOf<AStructure>> StartingStructures;
+	UFUNCTION()
+	virtual void OnGameSaved(const FString& SlotName, const int32 UserIndex, bool bSuccess);
+
+	UFUNCTION()
+	virtual void OnSaveLoaded(const FString& SlotName, const int32 UserIndex, USaveGame* LoadedGameData);
+
+	UFUNCTION()
+	virtual void LoadSavedStructures(TArray<FStructureSave> SavedStructures);
 
 public:
-
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 	FStructureBuiltSignature OnStructureBuilt;
 
@@ -42,6 +54,18 @@ public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 	FStructureDeSelectedSignature OnStructureDeSelected;
 
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FResidentRequestedSignature OnResidentRequested;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FWorkerRequestedSignature OnWorkerRequested;
+
 	UFUNCTION(BlueprintPure, Category="Strategy Game Instance")
 	int32 GetGridSize() const { return GridSize; }
+
+	UFUNCTION(BlueprintCallable, Category="Strategy Game Instance")
+	void SaveGame();
+
+	UFUNCTION(BlueprintCallable, Category="Strategy Game Instance")
+	void LoadSave();
 };

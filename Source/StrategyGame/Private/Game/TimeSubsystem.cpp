@@ -17,14 +17,39 @@ void UTimeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	GetWorld()->GetTimerManager().SetTimer(UpdateTimeOfDayTimer, UpdateTimeOfDayTimerDelegate, UpdateTimeOfDayFrequency, bShouldLoop);
 }
 
+float UTimeSubsystem::SetTimeOfDay(float InHours)
+{
+	while (InHours >= 24.0f)
+	{
+		InHours -= 24.0f;
+	}
+	return TimeOfDay = InHours;
+}
+
+int32 UTimeSubsystem::SetDaysCityHasSurvived(const int32 InDays)
+{
+	return DaysCitySurvived = InDays;
+}
+
 void UTimeSubsystem::IncreaseTimeOfDay(const float InHours)
 {
+	const bool bWasWorkTime = IsTimeToWork();
+	
 	TimeOfDay += InHours * TimeScaleMultiplier;
 	
-	if (TimeOfDay >= 24.0f)
+	while (TimeOfDay >= 24.0f)
 	{
 		TimeOfDay -= 24.0f;
 		DaysCitySurvived++;
+	}
+
+	if (IsTimeToWork() && !bWasWorkTime)
+    {
+    	OnWorkTimeStarted.Broadcast();
+    }
+	else if (!IsTimeToWork() && bWasWorkTime)
+	{
+		OnWorkTimeEnded.Broadcast();
 	}
 
 	OnTimePassed.Broadcast(InHours);
@@ -34,6 +59,11 @@ void UTimeSubsystem::SetTimeScaleMultiplier(const float InMultiplier)
 {
 	TimeScaleMultiplier = InMultiplier;
 	OnTimeScaleChanged.Broadcast(TimeScaleMultiplier);
+}
+
+float UTimeSubsystem::GetTimeOfDay() const
+{
+	return TimeOfDay;
 }
 
 FString UTimeSubsystem::GetTimeOfDayString()
@@ -85,7 +115,7 @@ float UTimeSubsystem::GetWorkEndTime() const
 	return WorkEndTime;
 }
 
-bool UTimeSubsystem::IsWorkTime() const
+bool UTimeSubsystem::IsTimeToWork() const
 {
 	return TimeOfDay < WorkEndTime && TimeOfDay > WorkStartTime;
 }

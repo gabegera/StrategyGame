@@ -19,15 +19,12 @@ class STRATEGYGAME_API APopulationManager : public AActor
 protected:
 
 	UPROPERTY(VisibleAnywhere, Category="Population Manager")
+	uint16 MaxVisibleCitizens = 50;
+
+	UPROPERTY(VisibleAnywhere, Category="Population Manager")
 	TSet<ACitizen*> Citizens;
 
 	virtual void BeginPlay() override;
-
-	UFUNCTION()
-	virtual void OnStructureBuilt(AStructure* NewStructure);
-
-	UFUNCTION()
-	virtual void OnStructureDestroyed();
 
 public:
 

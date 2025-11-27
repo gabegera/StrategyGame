@@ -5,9 +5,14 @@
 #include "UI/BaseStrategyWidget.h"
 
 #include "Kismet/GameplayStatics.h"
-#include "Player/RTSPlayerController.h"
+#include "Player/StrategyPlayerController.h"
 
 void UBaseStrategyWidget::NativeConstruct()
 {
-	RTSPlayerController = Cast<ARTSPlayerController>(UGameplayStatics::GetActorOfClass(this, ARTSPlayerController::StaticClass()));
+	StrategyPlayerController = Cast<AStrategyPlayerController>(GetWorld()->GetFirstPlayerController());
+}
+
+AStrategyPlayerController* UBaseStrategyWidget::GetStrategyPlayerController() const
+{
+	return StrategyPlayerController;
 }

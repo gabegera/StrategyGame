@@ -4,6 +4,7 @@
 #include "Building/ResourceGenerator.h"
 
 #include "Components/ResourceGenerationComponent.h"
+#include "Components/WorkersComponent.h"
 
 
 // Sets default values
@@ -13,6 +14,8 @@ AResourceGenerator::AResourceGenerator()
 	PrimaryActorTick.bCanEverTick = false;
 
 	ResourceGenerationComponent = CreateDefaultSubobject<UResourceGenerationComponent>("Resource Generation");
+
+	WorkersComponent = CreateDefaultSubobject<UWorkersComponent>("Workers");
 
 	StructureCategory = EStructureCategory::ResourceGeneration;
 }

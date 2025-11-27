@@ -3,16 +3,37 @@
 
 #include "UI/StructureHorizontalBoxWidget.h"
 
+#include "StrategyStatics.h"
 #include "Building/Structure.h"
 #include "Components/HorizontalBox.h"
-#include "Game/UpgradesSubsystem.h"
+#include "Game/UnlocksSubsystem.h"
 #include "UI/StructureButtonWidget.h"
+
+void UStructureHorizontalBoxWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+
+	FetchAllStructuresFromCategory(StructureCategory);
+}
+
+void UStructureHorizontalBoxWidget::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	FetchAllStructuresFromCategory(StructureCategory);
+}
 
 void UStructureHorizontalBoxWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	AddAllStructuresFromCategory(StructureCategory);
+	for (const TPair Structure : BuildableStructures)
+	{
+		if (Structure.Key && Structure.Value == true)
+		{
+			AddStructureButton(Structure.Key);
+		}
+	}
 }
 
 void UStructureHorizontalBoxWidget::AddStructureButton(const TSubclassOf<AStructure> InAssignedStructure)
@@ -28,14 +49,13 @@ void UStructureHorizontalBoxWidget::AddStructureButton(const TSubclassOf<AStruct
 	}
 }
 
-void UStructureHorizontalBoxWidget::AddAllStructuresFromCategory(EStructureCategory InStructureCategory)
+void UStructureHorizontalBoxWidget::FetchAllStructuresFromCategory(const EStructureCategory InStructureCategory)
 {
-	UUpgradesSubsystem* UpgradesSubsystem = GetGameInstance()->GetSubsystem<UUpgradesSubsystem>();
-
-	if (UpgradesSubsystem->GetUnlockedStructuresOfCategory(InStructureCategory).IsEmpty()) return;
-	
-	for (const TSubclassOf Structure : UpgradesSubsystem->GetUnlockedStructuresOfCategory(InStructureCategory))
+	for (TSubclassOf<AStructure> StructureClass : UStrategyStatics::GetAllStructureClasses())
 	{
-		AddStructureButton(Structure);
+		if (StructureClass.GetDefaultObject()->GetStructureCategory() == InStructureCategory)
+		{
+			BuildableStructures.FindOrAdd(StructureClass, true);
+		}
 	}
 }

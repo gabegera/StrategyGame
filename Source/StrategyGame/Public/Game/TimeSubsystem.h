@@ -8,6 +8,8 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTimePassedSignature, float, HoursPassed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTimeScaleChangedSignature, float, NewTimeScaleMultipier);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWorkTimeStartedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWorkTimeEndedSignature);
 
 /**
  * 
@@ -48,7 +50,7 @@ protected:
 
 	// At what time of day the citizens will end their work day and go home.
 	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance", meta=(ClampMin=0.0f, ClampMax=23.5))
-	float WorkEndTime = 15.0f;
+	float WorkEndTime = 16.0f;
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
@@ -59,6 +61,18 @@ public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category="Time Subsystem")
 	FTimeScaleChangedSignature OnTimeScaleChanged;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category="Time Subsystem")
+	FWorkTimeStartedSignature OnWorkTimeStarted;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable, Category="Time Subsystem")
+	FWorkTimeStartedSignature OnWorkTimeEnded;
+
+	UFUNCTION(BlueprintCallable, Category="Time Subsystem")
+	float SetTimeOfDay(float InHours);
+
+	UFUNCTION(BlueprintCallable, Category="Time Subsystem")
+	int32 SetDaysCityHasSurvived(const int32 InDays);
 	
 	UFUNCTION(BlueprintCallable, Category="Time Subsystem")
 	void IncreaseTimeOfDay(float InHours);
@@ -67,7 +81,7 @@ public:
 	void SetTimeScaleMultiplier(const float InMultiplier);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Time Subsystem")
-	float GetTimeOfDay() const { return TimeOfDay; }
+	float GetTimeOfDay() const;
 
 	// Gets the time of day as a string in a 00:00 format.
 	UFUNCTION(BlueprintPure, Category="Time Subsystem")
@@ -95,5 +109,5 @@ public:
 	float GetWorkEndTime() const;
 
 	UFUNCTION(BlueprintPure, Category="Time Subsystem")
-	bool IsWorkTime() const;
+	bool IsTimeToWork() const;
 };

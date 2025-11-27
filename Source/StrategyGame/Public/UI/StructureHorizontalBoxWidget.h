@@ -29,6 +29,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Structure List")
 	EStructureCategory StructureCategory;
 
+	// If a structure is set to true then it'll be added to the list of buildable structures.
+	UPROPERTY(EditAnywhere, Category="Structure List")
+	TMap<TSubclassOf<AStructure>, bool> BuildableStructures;
+
+	virtual void NativePreConstruct() override;
+
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+
 	virtual void NativeConstruct() override;
 
 public:
@@ -37,5 +45,5 @@ public:
 	void AddStructureButton(TSubclassOf<AStructure> InAssignedStructure);
 
 	UFUNCTION(BlueprintCallable, Category="Structure List")
-	void AddAllStructuresFromCategory(EStructureCategory InStructureCategory);
+	void FetchAllStructuresFromCategory(EStructureCategory InStructureCategory);
 };

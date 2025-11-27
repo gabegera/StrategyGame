@@ -3,15 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/SphereComponent.h"
 #include "CustomActor.h"
-#include "Game/ResourcesSubsystem.h"
+#include "Interfaces/ResourcesInterface.h"
 #include "ResourceNode.generated.h"
 
+class ULookAtCameraTextRenderComponent;
 class AStructure;
+class UResourceDataAsset;
 
 UCLASS()
-class STRATEGYGAME_API AResourceNode : public ACustomActor
+class STRATEGYGAME_API AResourceNode : public ACustomActor, public IResourcesInterface
 {
 	GENERATED_BODY()
 
@@ -26,40 +27,29 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* StaticMesh = nullptr;
 
-	UPROPERTY(EditDefaultsOnly)
-	USphereComponent* Sphere;
-
-	UPROPERTY() AStructure* AssignedExtractor;
-
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	UResourceDataAsset* ResourceType;
 
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
-	int32 ResourceAmount = 500;
+	float ResourceAmount = 500.0f;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual float TryDrainResource(float DrainAmount) override;
+
+	virtual UResourceDataAsset* TryGetResourceType() override;
+
+	virtual float TryGetResourceAmount() override;
+
 public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable)
-	void DrainResource(int32 DecreaseAmount);
-
-	// ------ SETTERS ------
-
-	UFUNCTION(BlueprintCallable)
-	void SetAssignedExtractor(AStructure* NewExtractor);
-
-	// ------ GETTERS ------
+	float DrainResource(const float DrainAmount);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	int32 GetResourceAmount() { return ResourceAmount; }
+	float GetResourceAmount() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	UResourceDataAsset* GetResourceType() { return ResourceType; }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	AStructure* GetAssignedExtractor() { return AssignedExtractor; }
+	UResourceDataAsset* GetResourceType() const;
 };

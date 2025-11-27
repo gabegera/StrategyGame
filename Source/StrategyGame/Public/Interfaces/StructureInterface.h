@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "StructureInterface.generated.h"
 
+class UResourceDataAsset;
 class ARTSCamera;
 
 // This class does not need to be modified.
@@ -25,4 +26,14 @@ public:
 	virtual bool TrySelect(ARTSCamera* SelectInstigator);
 	
 	virtual bool TryRecycle(ARTSCamera* DestroyInstigator);
+
+	virtual bool DoesIncreaseStorage();
+
+	virtual bool DoesGenerateResources();
+
+	virtual bool DoesHarvestResources();
+
+	virtual bool DoesProvideHousing();
+
+	virtual bool DoesRequireWorkers();
 };

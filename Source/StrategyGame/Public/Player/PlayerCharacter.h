@@ -7,7 +7,7 @@
 #include "StrategyGameCharacter.h"
 #include "Turrets/RemoteControlTurret.h"
 #include "Camera/CameraComponent.h"
-#include "Player/RTSPlayerController.h"
+#include "Player/StrategyPlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interfaces/InteractionInterface.h"
 #include "PlayerCharacter.generated.h"
@@ -26,7 +26,7 @@ public:
 protected:
 	
 	UPROPERTY()
-	ARTSPlayerController* RTSPlayerController;
+	AStrategyPlayerController* RTSPlayerController;
 
 	UPROPERTY(EditAnywhere, Category="Components")
 	UCameraComponent* FirstPersonCamera = nullptr;
@@ -158,7 +158,7 @@ public:
 	// ------ GETTERS ------
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	ARTSPlayerController* GetPlayerController() const { return RTSPlayerController; }
+	AStrategyPlayerController* GetPlayerController() const { return RTSPlayerController; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UCameraComponent* GetFirstPersonCamera() const { return FirstPersonCamera; }

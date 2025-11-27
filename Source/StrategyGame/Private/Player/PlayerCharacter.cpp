@@ -37,7 +37,7 @@ void APlayerCharacter::BeginPlay()
 	
 	GetWorldTimerManager().SetTimer(InteractionTimer, this, &APlayerCharacter::CheckForInteractable, 1.0f / InteractionChecksPerSecond, true);
 
-	RTSPlayerController = Cast<ARTSPlayerController>(GetController());
+	RTSPlayerController = Cast<AStrategyPlayerController>(GetController());
 }
 
 void APlayerCharacter::Move(FVector2D MoveInput)

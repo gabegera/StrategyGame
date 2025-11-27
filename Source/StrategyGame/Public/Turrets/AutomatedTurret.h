@@ -9,7 +9,7 @@
 class AEnemyShip;
 class USphereComponent;
 
-UCLASS()
+UCLASS(Abstract)
 class STRATEGYGAME_API AAutomatedTurret : public ATurret
 {
 	GENERATED_BODY()

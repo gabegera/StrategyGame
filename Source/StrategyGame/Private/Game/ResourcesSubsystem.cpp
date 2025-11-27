@@ -3,72 +3,104 @@
 
 #include "Game/ResourcesSubsystem.h"
 
+#include "StrategyEnums.h"
+#include "Building/Structure.h"
 #include "Citizens/Citizen.h"
-
-UResourcesSubsystem::UResourcesSubsystem()
-{
-	Population.Add(ECitizenType::Worker, 100);
-	Population.Add(ECitizenType::Scientist, 20);
-}
+#include "Components/ResourceStorageComponent.h"
+#include "Game/StrategyGameInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 void UResourcesSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	ClampResources();
+	UStrategyGameInstance* GameInstance = GetWorld()->GetGameInstance<UStrategyGameInstance>();
+	GameInstance->OnStructureBuilt.AddUniqueDynamic(this, &ThisClass::OnStructureBuilt);
+	GameInstance->OnStructureDestroyed.AddUniqueDynamic(this, &ThisClass::OnStructureDestroyed);
+
+	GetWorld()->OnWorldBeginPlay.AddUObject(this, &ThisClass::OnBeginPlay);
 }
 
-void UResourcesSubsystem::ClampResources()
+void UResourcesSubsystem::ClampAllResources()
 {
-	for (auto Resource : ResourceInventory)
+	if (ResourceInventory.IsEmpty()) return;
+
+	TArray<UResourceDataAsset*> Keys;
+	ResourceInventory.GetKeys(Keys);
+	for (UResourceDataAsset* Key : Keys)
 	{
-		UResourceDataAsset* ResourceData;
-		ResourceData = Resource.Key;
-		float Amount = Resource.Value;
-		
-		if (Amount > GetResourceCapacity(ResourceData))
-		{
-			ResourceInventory.Add(ResourceData, GetResourceCapacity(ResourceData));
-		}
-		else if (Amount < 0)
-		{
-			ResourceInventory.Add(ResourceData, 0);
-		}
+		ClampResource(Key);
 	}
 }
 
-float UResourcesSubsystem::GetResourceAmount(UResourceDataAsset* InResource) const
+void UResourcesSubsystem::ClampResource(UResourceDataAsset* InResource)
 {
-	if (ResourceInventory.Contains(InResource))
-	{
-		return ResourceInventory.FindRef(InResource);
-	}
-	
-	return 0.0f;
+	ResourceInventory.Add(InResource, FMath::Clamp(GetResourceAmount(InResource), 0.0f, static_cast<float>(GetResourceCapacity(InResource))));
 }
 
-int32 UResourcesSubsystem::GetResourceAmountInt(UResourceDataAsset* InResource) const
+void UResourcesSubsystem::OnBeginPlay()
+{
+	if (ACityDefenseGameMode* GameMode = Cast<ACityDefenseGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		ResourceInventory = GameMode->GetStartingResources();
+	}
+
+	UpdateStorageCapacity();
+}
+
+void UResourcesSubsystem::OnStructureBuilt(AStructure* NewStructure)
+{
+	if (NewStructure && NewStructure->DoesIncreaseStorage())
+	{
+		UpdateStorageCapacity();
+	}
+}
+
+void UResourcesSubsystem::OnStructureDestroyed(AStructure* NewStructure)
+{
+	if (NewStructure && NewStructure->DoesIncreaseStorage())
+	{
+		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::UpdateStorageCapacity);
+	}
+}
+
+TMap<UResourceDataAsset*, float>& UResourcesSubsystem::SetResourceInventory(const TMap<UResourceDataAsset*, float> InResources)
+{
+	return ResourceInventory = InResources;
+}
+
+TMap<UResourceDataAsset*, float>& UResourcesSubsystem::GetResourceInventory()
+{
+	return ResourceInventory;
+}
+
+float UResourcesSubsystem::GetResourceAmount(UResourceDataAsset* InResource)
+{
+	return ResourceInventory.FindOrAdd(InResource);
+}
+
+int32 UResourcesSubsystem::GetResourceAmountInt(UResourceDataAsset* InResource)
 {
 	return FMath::FloorToInt32(GetResourceAmount(InResource));
 }
 
-int32 UResourcesSubsystem::GetResourceCapacity(UResourceDataAsset* InResource) const
+TMap<UResourceDataAsset*, int32>& UResourcesSubsystem::SetResourceCapacity(const TMap<UResourceDataAsset*, int32> InCapacity)
 {
-	if (MaximumResources.Contains(InResource))
-	{
-		return MaximumResources.FindRef(InResource);
-	}
-	
-	return 0;
+	return MaximumResources = InCapacity;
 }
 
-FText UResourcesSubsystem::GetResourceText(UResourceDataAsset* InResource) const
+int32 UResourcesSubsystem::GetResourceCapacity(UResourceDataAsset* InResource)
+{
+	return MaximumResources.FindOrAdd(InResource);
+}
+
+FText UResourcesSubsystem::GetResourceText(UResourceDataAsset* InResource)
 {
 	if (!InResource)
 	{
 		return FText::FromString("ERROR: Invalid InResource.");
 	}
-	
+
 	FString OutString = InResource->GetResourceName().ToString();
 	OutString.Append(": ");
 	OutString.AppendInt(GetResourceAmountInt(InResource));
@@ -78,30 +110,25 @@ FText UResourcesSubsystem::GetResourceText(UResourceDataAsset* InResource) const
 	return FText::FromString(OutString);
 }
 
-int32 UResourcesSubsystem::GetPopulation(ECitizenType WorkerType) const
+int32 UResourcesSubsystem::GetPopulation(const ECitizenType WorkerType)
 {
-	if (Population.Contains(WorkerType))
-	{
-		return Population.FindRef(WorkerType);
-	}
-
-	return 0;
+	return Population.FindOrAdd(WorkerType);
 }
 
-int32 UResourcesSubsystem::GetTotalPopulation() const
+int32 UResourcesSubsystem::GetTotalPopulation()
 {
 	return GetPopulation(ECitizenType::Worker) + GetPopulation(ECitizenType::Scientist);
 }
 
-int32 UResourcesSubsystem::GetPopulationCapacity() const
+int32 UResourcesSubsystem::GetPopulationCapacity()
 {
 	return PopulationCapacity;
 }
 
-int32 UResourcesSubsystem::GetEmployedPopulation(const ECitizenType CitizenType) const
+int32 UResourcesSubsystem::GetEmployedPopulation(ECitizenType CitizenType)
 {
 	int32 EmployedWorkers = 0;
-	
+
 	// for (auto Structure : BuiltStructures)
 	// {
 	// 	EmployedWorkers += Structure->GetWorkerCount(CitizenType);
@@ -110,15 +137,14 @@ int32 UResourcesSubsystem::GetEmployedPopulation(const ECitizenType CitizenType)
 	return EmployedWorkers;
 }
 
-int32 UResourcesSubsystem::GetUnemployedPopulation(const ECitizenType WorkerType) const
+int32 UResourcesSubsystem::GetUnemployedPopulation(const ECitizenType WorkerType)
 {
 	return GetPopulation(WorkerType) - GetEmployedPopulation(WorkerType);
 }
 
-int32 UResourcesSubsystem::GetTotalEmployedPopulation() const
-{
+int32 UResourcesSubsystem::GetTotalEmployedPopulation() {
 	int32 EmployedWorkers = 0;
-	
+
 	// for (auto Structure : BuiltStructures)
 	// {
 	// 	EmployedWorkers += Structure->GetTotalWorkers();
@@ -127,12 +153,12 @@ int32 UResourcesSubsystem::GetTotalEmployedPopulation() const
 	return EmployedWorkers;
 }
 
-int32 UResourcesSubsystem::GetTotalUnemployedPopulation() const
+int32 UResourcesSubsystem::GetTotalUnemployedPopulation()
 {
 	return GetTotalPopulation() - GetTotalEmployedPopulation();
 }
 
-int32 UResourcesSubsystem::GetHomelessPopulation() const
+int32 UResourcesSubsystem::GetHomelessPopulation()
 {
 	if (GetTotalPopulation() < PopulationCapacity) return 0;
 
@@ -141,19 +167,27 @@ int32 UResourcesSubsystem::GetHomelessPopulation() const
 
 float UResourcesSubsystem::AddResources(UResourceDataAsset* ResourceToAdd, const float AmountToAdd)
 {
-	ResourceInventory.Add(ResourceToAdd, GetResourceAmount(ResourceToAdd) + AmountToAdd);
+	if (ResourceToAdd)
+	{
+		ResourceInventory.Add(ResourceToAdd, GetResourceAmount(ResourceToAdd) + AmountToAdd);
 
-	ClampResources();
+		ClampAllResources();
+	}
 
 	OnResourceAdded.Broadcast(ResourceToAdd, AmountToAdd);
 	return GetResourceAmount(ResourceToAdd);
+}
+
+float UResourcesSubsystem::AddResources(UResourceDataAsset* ResourceToAdd, const int32 AmountToAdd)
+{
+	return AddResources(ResourceToAdd, static_cast<float>(AmountToAdd));
 }
 
 float UResourcesSubsystem::ConsumeResources(UResourceDataAsset* ResourceToConsume, const float AmountToConsume)
 {
 	ResourceInventory.Add(ResourceToConsume, GetResourceAmount(ResourceToConsume) - AmountToConsume);
 
-	ClampResources();
+	ClampAllResources();
 
 	OnResourceConsumed.Broadcast(ResourceToConsume, AmountToConsume);
 	return GetResourceAmount(ResourceToConsume);
@@ -162,7 +196,7 @@ float UResourcesSubsystem::ConsumeResources(UResourceDataAsset* ResourceToConsum
 int32 UResourcesSubsystem::IncreaseResourceStorage(UResourceDataAsset* StoredResource, const int32 IncreaseAmount)
 {
 	MaximumResources.Add(StoredResource, GetResourceCapacity(StoredResource) + IncreaseAmount);
-	ClampResources();
+	ClampAllResources();
 	OnResourceStorageIncreased.Broadcast(StoredResource, IncreaseAmount);
 	return GetResourceCapacity(StoredResource);
 }
@@ -170,9 +204,40 @@ int32 UResourcesSubsystem::IncreaseResourceStorage(UResourceDataAsset* StoredRes
 int32 UResourcesSubsystem::DecreaseResourceStorage(UResourceDataAsset* StoredResource, const int32 DecreaseAmount)
 {
 	MaximumResources.Add(StoredResource, FMath::Clamp(GetResourceCapacity(StoredResource) - DecreaseAmount, 0, GetResourceCapacity(StoredResource)));
-	ClampResources();
+	ClampAllResources();
 	OnResourceStorageDecreased.Broadcast(StoredResource, DecreaseAmount);
 	return GetResourceCapacity(StoredResource);
+}
+
+void UResourcesSubsystem::UpdateStorageCapacity()
+{
+	TMap<UResourceDataAsset*, int32> UpdatedCapacity;
+	if (ACityDefenseGameMode* GameMode = Cast<ACityDefenseGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		UpdatedCapacity = GameMode->GetStartingMaxResources();
+	}
+
+	TArray<AActor*> AllStructures;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStructure::StaticClass(), AllStructures);
+
+	// TODO: I'm gonna need to find a more efficient way of doing this but for now this works.
+
+	for (AActor* Structure : AllStructures)
+	{
+		IStructureInterface* StructureInterface = Cast<IStructureInterface>(Structure);
+		if (StructureInterface && StructureInterface->DoesIncreaseStorage())
+		{
+			UResourceStorageComponent* ResourceStorageComponent =  Structure->GetComponentByClass<UResourceStorageComponent>();
+			for (UResourceDataAsset* Resource : ResourceStorageComponent->GetStorageResources())
+			{
+				UpdatedCapacity.Add(Resource, UpdatedCapacity.FindOrAdd(Resource) + ResourceStorageComponent->GetResourceStorageAmount(Resource));
+			}
+		}
+	}
+
+	MaximumResources = UpdatedCapacity;
+
+	ClampAllResources();
 }
 
 int32 UResourcesSubsystem::IncreasePopulation(const ECitizenType CitizenType, const int32 IncreaseAmount)

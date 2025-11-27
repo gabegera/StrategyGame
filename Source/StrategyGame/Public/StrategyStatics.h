@@ -6,7 +6,10 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StrategyStatics.generated.h"
 
+class AStructure;
+class UResourceDataAsset;
 enum class ECitizenType : uint8;
+
 /**
  * 
  */
@@ -15,22 +18,17 @@ class STRATEGYGAME_API UStrategyStatics : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
-protected:
-	
-	static inline TSubclassOf<class ACitizen> CitizenClassToSpawn;
-
 public:
-
-	UStrategyStatics();
 
 	UFUNCTION(BlueprintPure, Category="Game", meta=(WorldContext="WorldContextObject", UnsafeDuringActorConstruction="true"))
 	static int32 GetGridSize(const UObject* WorldContextObject);
 
-	UFUNCTION(BlueprintCallable, Category="Civilians", meta=(WorldContext="WorldContextObject", UnsafeDuringActorConstruction="true"))
-	static void SpawnCitizen(const UObject* WorldContextObject, ECitizenType CitizenType);
+	UFUNCTION(BlueprintPure, Category="Game")
+	static TArray<UResourceDataAsset*> GetAllResources();
 
-	UFUNCTION(BlueprintCallable, Category="Civilians", meta=(WorldContext="WorldContextObject", UnsafeDuringActorConstruction="true"))
-	static void SpawnCitizensMulti(const UObject* WorldContextObject, int32 NumOfWorkers, int32 NumOfScientists);
+	UFUNCTION(BlueprintPure, Category="Game")
+	static UResourceDataAsset* GetResourceByName(const FString& InName);
 
-	
+	UFUNCTION(BlueprintPure, Category="Game")
+	static TSet<TSubclassOf<AStructure>> GetAllStructureClasses();
 };
