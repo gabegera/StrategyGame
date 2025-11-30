@@ -67,7 +67,7 @@ void ACitizenAIController::OnTimePassed(float HoursPassed)
 		case ECitizenState::Roaming:
 			if (!GetPathFollowingComponent()->HasValidPath())
 			{
-				MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
+				// MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
 			}
 			break;
 		case ECitizenState::GoingHome:

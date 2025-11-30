@@ -86,7 +86,7 @@ void ACitizen::OnResidentRequested(AStructure* StructureSource, UHousingComponen
 
 void ACitizen::OnWorkerRequested(AStructure* StructureSource, UWorkersComponent* Workers, const ECitizenType RequestedCitizenType)
 {
-    if (Workers && CitizenType == RequestedCitizenType && !Workers->IsFullCapacity())
+    if (Workers && CitizenType == RequestedCitizenType && !Workers->IsFullCapacity() && !IsEmployed())
     {
     	AssignWorkplace(StructureSource);
     	Workers->AssignWorker(this);

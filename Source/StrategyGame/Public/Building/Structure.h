@@ -5,12 +5,14 @@
 #include "CoreMinimal.h"
 #include "CustomActor.h"
 #include "Components/BoxComponent.h"
+#include "Components/ActorComponent.h"
 #include "ResourceNode.h"
 #include "Interfaces/StructureInterface.h"
 #include "Structure.generated.h"
 
 class ULookAtCameraTextRenderComponent;
 class UArrowComponent;
+enum class EUpdateTransformFlags : int32;
 
 UENUM(BlueprintType)
 enum class EStructureState : uint8
@@ -153,7 +155,7 @@ public:
 	virtual bool DoesRequireWorkers() override;
 
 	UFUNCTION(BlueprintCallable)
-	virtual void MoveBuilding(FVector NewLocation);
+	virtual void MoveStructure(FVector NewLocation);
 	
 	UFUNCTION(BlueprintCallable)
 	virtual void PlaceBuilding();

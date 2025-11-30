@@ -221,9 +221,10 @@ bool AStructure::DoesRequireWorkers()
 	return WorkersComponent && WorkersComponent->GetMaxNumOfWorkers() > 0;
 }
 
-void AStructure::MoveBuilding(const FVector NewLocation)
+void AStructure::MoveStructure(const FVector NewLocation)
 {
 	SetActorLocation(NewLocation);
+	UpdateBuildMaterials();
 }
 
 void AStructure::PlaceBuilding()

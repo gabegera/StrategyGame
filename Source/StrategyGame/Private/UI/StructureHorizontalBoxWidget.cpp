@@ -27,13 +27,13 @@ void UStructureHorizontalBoxWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	for (const TPair Structure : BuildableStructures)
-	{
-		if (Structure.Key && Structure.Value == true)
-		{
-			AddStructureButton(Structure.Key);
-		}
-	}
+	// for (const TPair Structure : BuildableStructures)
+	// {
+	// 	if (Structure.Key && Structure.Value == true)
+	// 	{
+	// 		AddStructureButton(Structure.Key);
+	// 	}
+	// }
 }
 
 void UStructureHorizontalBoxWidget::AddStructureButton(const TSubclassOf<AStructure> InAssignedStructure)

@@ -39,7 +39,7 @@ protected:
 
 	// The Time of Day in hours. Ranges between 0 and 24
 	UPROPERTY(VisibleAnywhere, Category="Time Subsystem", meta=(Units="Hours"))
-	float TimeOfDay = 12.0f;
+	float TimeOfDay = 8.0f;
 
 	UPROPERTY(VisibleAnywhere, Category="Time Subsystem", meta=(Units="Days"))
 	int32 DaysCitySurvived = 0;
@@ -50,7 +50,7 @@ protected:
 
 	// At what time of day the citizens will end their work day and go home.
 	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance", meta=(ClampMin=0.0f, ClampMax=23.5))
-	float WorkEndTime = 16.0f;
+	float WorkEndTime = 20.0f;
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 

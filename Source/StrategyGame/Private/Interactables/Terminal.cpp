@@ -8,6 +8,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "Player/PlayerCharacter.h"
 #include "UI/TerminalScreenWidget.h"
+#include "Interfaces/RemoteTriggerInterface.h"
 
 
 uint32 GetTypeHash(const FTerminalCommand& Command)
@@ -84,7 +85,14 @@ void ATerminal::OnCommandLineTextCommited(const FText& InText, ETextCommit::Type
 			return;
 			
 		case ECommandType::RemotelyTriggerObject:
-			
+
+			for (AActor* Target : TerminalCommand.ObjectsToRemotelyTrigger)
+			{
+				if (Target->Implements<URemoteTriggerInterface>())
+				{
+					IRemoteTriggerInterface::Execute_TryRemoteTrigger(Target, this);
+				}
+			}
 			return;
 			
 		default:

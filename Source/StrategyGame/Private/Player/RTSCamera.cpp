@@ -226,7 +226,7 @@ void ARTSCamera::MoveStructureToMousePos()
 	FVector NewLocation = SnapVectorToGrid(Hit.ImpactPoint, UStrategyStatics::GetGridSize(this));
 	NewLocation += FVector(SelectedStructure->GetSnappingOffset().X, SelectedStructure->GetSnappingOffset().Y, 0.0f);
 
-	SelectedStructure->MoveBuilding(NewLocation);
+	SelectedStructure->MoveStructure(NewLocation);
 }
 
 // Called every frame

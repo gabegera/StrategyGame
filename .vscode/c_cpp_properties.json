@@ -1,0 +1,11 @@
+{
+	"configurations": [
+		{
+			"name": "Linux",
+			"cStandard": "c17",
+			"cppStandard": "c++20",
+			"intelliSenseMode": "clang-x64",
+			"compileCommands": "/home/gabeg/Documents/Unreal Projects/StrategyGame/.vscode/compileCommands_Default.json"
+		}
+	]
+}
