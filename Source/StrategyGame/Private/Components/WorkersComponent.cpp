@@ -83,9 +83,9 @@ void UWorkersComponent::OnStructureDestroyed(AStructure* DestroyedStructure)
 	}
 }
 
-bool UWorkersComponent::AssignWorker(ACitizen* InWorker)
+bool UWorkersComponent::AssignWorker(ACitizen* InWorker, const bool bForceSuccess)
 {
-	if (!IsFullCapacity() && bPendingNewWorker)
+	if (!IsFullCapacity() && (bPendingNewWorker || bForceSuccess))
 	{
 		AssignedWorkers.Add(InWorker);
 		bPendingNewWorker = false;

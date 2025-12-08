@@ -54,8 +54,13 @@ public:
 	UFUNCTION(BlueprintPure, Category="Workers")
 	bool CanCitizenTypeBeEmployed(ECitizenType InCitizenType);
 
+	/** Attempts to assign a citizen as a worker to this component. Will always fail if the component is already full.
+	 * @param InWorker The worker to be employed.
+	 * @param bForceSuccess When set to true the employment will always succeed, else other factors will contribute.
+	 * @returns if successful.
+	 */
 	UFUNCTION(BlueprintCallable, Category="Workers")
-	bool AssignWorker(ACitizen* InWorker);
+	bool AssignWorker(ACitizen* InWorker, bool bForceSuccess = false);
 
 	UFUNCTION(BlueprintCallable, Category="Workers")
 	void RemoveWorkerOfType(ECitizenType InCitizenType);

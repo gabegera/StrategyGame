@@ -103,7 +103,8 @@ void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCi
 				{
 					if (UWorkersComponent* WorkersComponent = Structure->GetComponentByClass<UWorkersComponent>())
 					{
-						WorkersComponent->AssignWorker(SpawnedCitizen);
+						constexpr bool bForceSuccess = true;
+						WorkersComponent->AssignWorker(SpawnedCitizen, bForceSuccess);
 						SpawnedCitizen->AssignWorkplace(Cast<AStructure>(Structure));
 						if (!SpawnedCitizen->IsHomeless() || SavedCitizen.HomeName == "") break; // Early breaks to prevent iterating for longer than needed.
 					}
