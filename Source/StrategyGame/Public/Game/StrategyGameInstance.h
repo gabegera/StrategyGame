@@ -6,6 +6,8 @@
 #include "Engine/GameInstance.h"
 #include "StrategyGameInstance.generated.h"
 
+class UStrategySaveGame;
+struct FCitizenSave;
 class UWorkersComponent;
 class UHousingComponent;
 struct FStructureSave;
@@ -32,6 +34,10 @@ class STRATEGYGAME_API UStrategyGameInstance : public UGameInstance
 	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance")
 	uint16 GridSize = 500;
 
+	// Used to control functions that are performed when a new game is started.
+	UPROPERTY()
+	bool bWasSaveLoaded = false;
+
 	UFUNCTION()
 	virtual void OnGameSaved(const FString& SlotName, const int32 UserIndex, bool bSuccess);
 
@@ -39,7 +45,10 @@ class STRATEGYGAME_API UStrategyGameInstance : public UGameInstance
 	virtual void OnSaveLoaded(const FString& SlotName, const int32 UserIndex, USaveGame* LoadedGameData);
 
 	UFUNCTION()
-	virtual void LoadSavedStructures(TArray<FStructureSave> SavedStructures);
+	virtual void LoadSavedStructures(const TArray<FStructureSave> SavedStructures);
+
+	UFUNCTION()
+	virtual void LoadSavedCitizens(const TArray<FCitizenSave> SavedCitizens);
 
 public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
@@ -68,4 +77,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Strategy Game Instance")
 	void LoadSave();
+
+	// Used to control functions that are performed when a new game is started.
+	UFUNCTION(BlueprintCallable, Category="Strategy Game Instance")
+	bool WasSaveLoaded() const;
 };

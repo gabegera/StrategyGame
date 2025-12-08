@@ -25,6 +25,15 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category="Citizen AI")
 	float RoamingRadius = 1000.0f;
+
+	UPROPERTY(EditAnywhere, Category="Citizen AI")
+	float MinTimeBetweenRoam = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category="Citizen AI")
+	float MaxTimeBetweenRoam = 1.0f;
+
+	UPROPERTY()
+	FTimerHandle RoamingDelayTimer;
 	
 	// ------ BLACKBOARD KEYS ------
 
@@ -67,15 +76,18 @@ protected:
 	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
 
 	UFUNCTION(BlueprintCallable, Category="Citizen AI")
+	void MoveToRandomPointInRadius(FVector Origin, float Radius);
+
+public:
+
+	UFUNCTION(BlueprintCallable, Category="Citizen AI")
 	void GoToHome();
 
 	UFUNCTION(BlueprintCallable, Category="Citizen AI")
 	void GoToWork();
 
 	UFUNCTION(BlueprintCallable, Category="Citizen AI")
-	void MoveToRandomPointInRadius(FVector Origin, float Radius);
-
-public:
+	void Roam();
 
 	UFUNCTION(BlueprintPure, Category="Citizen AI")
 	ACitizen* GetCitizenPawn() const;

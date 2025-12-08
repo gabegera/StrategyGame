@@ -8,6 +8,7 @@
 #include "Citizens/CitizenSpawn.h"
 #include "Citizens/PopulationManager.h"
 #include "Game/ResourcesSubsystem.h"
+#include "Game/StrategyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
 ACityDefenseGameMode::ACityDefenseGameMode()
@@ -20,14 +21,12 @@ void ACityDefenseGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!StartingCitizens.IsEmpty())
+	if (!StartingCitizens.IsEmpty() && !GetGameInstance<UStrategyGameInstance>()->WasSaveLoaded())
 	{
 		const int32 NumOfWorkers = StartingCitizens.FindRef(ECitizenType::Worker);
 		const int32 NumOfScientists = StartingCitizens.FindRef(ECitizenType::Scientist);
 		SpawnCitizens(NumOfWorkers, NumOfScientists);
 	}
-
-	GetWorld()->SpawnActor(APopulationManager::StaticClass());
 }
 
 void ACityDefenseGameMode::PostInitProperties()

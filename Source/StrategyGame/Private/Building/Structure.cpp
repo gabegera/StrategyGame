@@ -17,6 +17,7 @@
 #include "Game/ResourcesSubsystem.h"
 #include "Game/StrategyGameInstance.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "NavAreas/NavArea_Obstacle.h"
 #include "Player/RTSCamera.h"
 
@@ -34,14 +35,14 @@ AStructure::AStructure()
 	StaticMeshComponent->SetCollisionProfileName("Selectable");
 	StaticMeshComponent->SetGenerateOverlapEvents(true);
 	
-	BuildingBounds = CreateDefaultSubobject<UBoxComponent>("Building Bounds");
-    BuildingBounds->SetupAttachment(StaticMeshComponent);
-    BuildingBounds->SetCollisionProfileName("OverlapAll");
-    BuildingBounds->SetGenerateOverlapEvents(true);
-	BuildingBounds->SetLineThickness(20.0f);
-	BuildingBounds->bDynamicObstacle = true;
-	BuildingBounds->SetAreaClassOverride(UNavArea_Obstacle::StaticClass());
-	BuildingBounds->SetCanEverAffectNavigation(true);
+	StructureBounds = CreateDefaultSubobject<UBoxComponent>("Building Bounds");
+    StructureBounds->SetupAttachment(StaticMeshComponent);
+    StructureBounds->SetCollisionProfileName("OverlapAll");
+    StructureBounds->SetGenerateOverlapEvents(true);
+	StructureBounds->SetLineThickness(20.0f);
+	StructureBounds->bDynamicObstacle = true;
+	StructureBounds->SetAreaClassOverride(UNavArea_Obstacle::StaticClass());
+	StructureBounds->SetCanEverAffectNavigation(true);
 
 	StructureEntranceArrow = CreateDefaultSubobject<UArrowComponent>("Entrance");
 	StructureEntranceArrow->SetupAttachment(StaticMeshComponent);
@@ -50,7 +51,7 @@ AStructure::AStructure()
 	StructureEntranceArrow->SetRelativeLocation(FVector(250.0f, 0.0f, 0.0f));
 
 	LookAtCameraTextRenderComponent = CreateDefaultSubobject<ULookAtCameraTextRenderComponent>("Structure Name");
-	LookAtCameraTextRenderComponent->SetupAttachment(BuildingBounds);
+	LookAtCameraTextRenderComponent->SetupAttachment(StructureBounds);
 	LookAtCameraTextRenderComponent->SetWorldSize(256.0f);
 	LookAtCameraTextRenderComponent->SetHorizontalAlignment(EHTA_Center);
 	
@@ -83,13 +84,13 @@ void AStructure::BeginPlay()
 
 	if (IsBeingPlaced())
 	{
-		BuildingBounds->SetHiddenInGame(false);
+		StructureBounds->SetHiddenInGame(false);
 	}
 
-	BuildingBounds->SetBoxExtent(FVector(BuildingBounds->GetUnscaledBoxExtent().X - 5, BuildingBounds->GetUnscaledBoxExtent().Y - 5, BuildingBounds->GetUnscaledBoxExtent().Z - 5));
+	StructureBounds->SetBoxExtent(FVector(StructureBounds->GetUnscaledBoxExtent().X - 5, StructureBounds->GetUnscaledBoxExtent().Y - 5, StructureBounds->GetUnscaledBoxExtent().Z - 5));
 	
-	BuildingBounds->OnComponentBeginOverlap.AddUniqueDynamic(this, &ThisClass::OnOverlapBegin);
-	BuildingBounds->OnComponentEndOverlap.AddUniqueDynamic(this, &ThisClass::OnOverlapEnd);
+	// StructureBounds->OnComponentBeginOverlap.AddUniqueDynamic(this, &ThisClass::OnOverlapBegin);
+	// StructureBounds->OnComponentEndOverlap.AddUniqueDynamic(this, &ThisClass::OnOverlapEnd);
 
 	UpdateBuildMaterials();
 }
@@ -125,58 +126,90 @@ void AStructure::OnConstruction(const FTransform& Transform)
 	
 	if (StaticMeshBounds == FVector::ZeroVector) StaticMeshBounds = FVector(HalfSnappingSize, HalfSnappingSize, HalfSnappingSize);
 	FVector SnappedBounds = FVector(FMath::CeilToInt32(StaticMeshBounds.X / HalfSnappingSize) * HalfSnappingSize, FMath::CeilToInt32(StaticMeshBounds.Y / HalfSnappingSize) * HalfSnappingSize, StaticMeshBounds.Z + 100);
-	BuildingBounds->SetBoxExtent(SnappedBounds);
-	BuildingBounds->SetRelativeLocation(FVector(0.0f, 0.0f, BuildingBounds->GetScaledBoxExtent().Z));
+	StructureBounds->SetBoxExtent(SnappedBounds);
+	StructureBounds->SetRelativeLocation(FVector(0.0f, 0.0f, StructureBounds->GetScaledBoxExtent().Z));
 	
 	// If the bounds of the Structure are an odd number of grids, then add a snapping offset to line up with the snapping grid properly.
-	if (static_cast<int32>(BuildingBounds->GetUnscaledBoxExtent().X) / HalfSnappingSize % 2 != 0)
+	if (static_cast<int32>(StructureBounds->GetUnscaledBoxExtent().X) / HalfSnappingSize % 2 != 0)
 	{
 		SnappingOffset.X = HalfSnappingSize;
 	}
-	if (static_cast<int32>(BuildingBounds->GetUnscaledBoxExtent().Y) / HalfSnappingSize % 2 != 0)
+	if (static_cast<int32>(StructureBounds->GetUnscaledBoxExtent().Y) / HalfSnappingSize % 2 != 0)
 	{
 		SnappingOffset.Y = HalfSnappingSize;
 	}
 
-	LookAtCameraTextRenderComponent->SetRelativeLocation(FVector::UpVector * BuildingBounds->GetScaledBoxExtent().Z);
+	LookAtCameraTextRenderComponent->SetRelativeLocation(FVector::UpVector * StructureBounds->GetScaledBoxExtent().Z);
 	LookAtCameraTextRenderComponent->SetText(StructureName);
 
 	const FRotator EntranceLookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetEntranceLocation(), SceneComponent->GetComponentLocation());
 	StructureEntranceArrow->SetWorldRotation(EntranceLookAtRotation);
 }
 
-void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	if (OtherActor->IsA(ABuildExclusionZone::StaticClass()) ||
-		OtherActor->IsA(AStructure::StaticClass()))
-	{
-		OverlappingExclusionZones.AddUnique(OtherActor);
-	}
-	
-	UpdateBuildMaterials();
-}
-
-void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
-	OverlappingExclusionZones.Remove(OtherActor);
-
-	UpdateBuildMaterials();
-}
+// void AStructure::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+// {
+// 	if (OtherActor->IsA(ABuildExclusionZone::StaticClass()) ||
+// 		OtherActor->IsA(AStructure::StaticClass()))
+// 	{
+// 		OverlappingExclusionZones.AddUnique(OtherActor);
+// 	}
+//
+// 	UpdateBuildMaterials();
+// }
+//
+// void AStructure::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+// {
+// 	OverlappingExclusionZones.Remove(OtherActor);
+//
+// 	UpdateBuildMaterials();
+// }
 
 void AStructure::OnStructureStateChanged(AStructure* Structure, EStructureState NewStructureState)
 {
 	switch (NewStructureState)
 	{
 	case EStructureState::BeingPlaced:
-		BuildingBounds->SetHiddenInGame(false);
+		StructureBounds->SetHiddenInGame(false);
 		break;
 	case EStructureState::UnderConstruction:
-		BuildingBounds->SetHiddenInGame(false);
+		StructureBounds->SetHiddenInGame(false);
 		break;
 	case EStructureState::ConstructionComplete:
-		BuildingBounds->SetHiddenInGame(true);
+		StructureBounds->SetHiddenInGame(true);
 		break;
 	}
+}
+
+void AStructure::CheckForCollisions()
+{
+	const FVector TraceStart = StructureBounds->GetComponentLocation();
+	const FVector TraceEnd = TraceStart;
+	const FVector HalfSize = StructureBounds->Bounds.BoxExtent;
+	const FRotator Orientation = StructureBounds->GetForwardVector().Rotation();
+	constexpr bool bTraceComplex = false;
+	TArray<AActor*> ActorsToIgnore;
+	constexpr bool bIgnoreSelf = true;
+
+	TArray<FHitResult> OutHits;
+	UKismetSystemLibrary::BoxTraceMulti(GetWorld(), TraceStart, TraceEnd, HalfSize, Orientation,
+		UEngineTypes::ConvertToTraceType(ECC_Camera), bTraceComplex, ActorsToIgnore, EDrawDebugTrace::None, OutHits, bIgnoreSelf);
+
+	for (FHitResult Hit : OutHits)
+	{
+		if (Hit.GetActor())
+		{
+			if (Hit.GetActor()->IsA<AResourceNode>() ||
+				Hit.GetActor()->IsA<AStructure>())
+			{
+				if (Hit.GetActor() == this) continue;
+
+				bIsOverlappingObject = true;
+				return;
+			}
+		}
+	}
+
+	bIsOverlappingObject = false;
 }
 
 bool AStructure::TrySelect(ARTSCamera* SelectInstigator)
@@ -224,6 +257,7 @@ bool AStructure::DoesRequireWorkers()
 void AStructure::MoveStructure(const FVector NewLocation)
 {
 	SetActorLocation(NewLocation);
+	CheckForCollisions();
 	UpdateBuildMaterials();
 }
 
@@ -398,9 +432,9 @@ bool AStructure::IsBuildingPermitted()
 		return false;
 	}
 	
-	if (IsOverlappingBuildExclusionZone())
+	if (IsOverlappingObject())
 	{
-		GEngine->AddOnScreenDebugMessage(802, 3.0f, FColor::Red, StructureName.ToString() + " is overlapping Build Exclusion Zone.");
+		GEngine->AddOnScreenDebugMessage(802, 3.0f, FColor::Red, StructureName.ToString() + " is overlapping object.");
 		return false;
 	}
 

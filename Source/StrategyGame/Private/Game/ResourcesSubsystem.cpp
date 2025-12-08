@@ -94,6 +94,11 @@ int32 UResourcesSubsystem::GetResourceCapacity(UResourceDataAsset* InResource)
 	return MaximumResources.FindOrAdd(InResource);
 }
 
+bool UResourcesSubsystem::IsResourceFullCapacity(UResourceDataAsset* InResource)
+{
+	return GetResourceAmount(InResource) >= GetResourceCapacity(InResource);
+}
+
 FText UResourcesSubsystem::GetResourceText(UResourceDataAsset* InResource)
 {
 	if (!InResource)

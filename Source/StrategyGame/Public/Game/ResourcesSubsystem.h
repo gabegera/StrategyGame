@@ -109,6 +109,9 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources Subsystem|Resources")
     int32 GetResourceCapacity(UResourceDataAsset* InResource);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resources Subsystem|Resources")
+	bool IsResourceFullCapacity(UResourceDataAsset* InResource);
+
     // Returns a Text formatted for display, [ResourceName]: [ResourceAmount] / [ResourceCapacity].
     UFUNCTION(BlueprintCallable, BlueprintPure, Category="Resource Subsystem|Resources")
     FText GetResourceText(UResourceDataAsset* InResource);

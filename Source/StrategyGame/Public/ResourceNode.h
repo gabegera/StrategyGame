@@ -30,17 +30,25 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	UResourceDataAsset* ResourceType;
 
+	// UPROPERTY(EditAnywhere)
+	// ULookAtCameraTextRenderComponent* ResourceText;
+
 	UPROPERTY(EditDefaultsOnly, Category="Resources")
 	float ResourceAmount = 500.0f;
 	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void OnConstruction(const FTransform& Transform) override;
+
 	virtual float TryDrainResource(float DrainAmount) override;
 
 	virtual UResourceDataAsset* TryGetResourceType() override;
 
 	virtual float TryGetResourceAmount() override;
+
+	// UFUNCTION()
+	// void UpdateResourceText() const;
 
 public:
 

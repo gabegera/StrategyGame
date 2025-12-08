@@ -65,11 +65,16 @@ void ACitizenAIController::OnTimePassed(float HoursPassed)
 		switch (CitizenPawn->GetCitizenState())
 		{
 		case ECitizenState::Roaming:
-			if (!GetPathFollowingComponent()->HasValidPath())
+			if (IsTimeToWork() && CitizenPawn->IsEmployed())
 			{
-				// MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
+				GoToWork();
+			}
+			else if (!CitizenPawn->IsHomeless())
+			{
+				GoToHome();
 			}
 			break;
+
 		case ECitizenState::GoingHome:
 			if (GetDistanceToStructureEntrance(CitizenPawn->GetHome()) < DistanceToEnterStructure)
 			{
@@ -77,8 +82,14 @@ void ACitizenAIController::OnTimePassed(float HoursPassed)
 				CitizenPawn->SetCitizenState(ECitizenState::AtHome);
 			}
 			break;
+
 		case ECitizenState::AtHome:
+			if (IsTimeToWork() && CitizenPawn->IsEmployed())
+			{
+				GoToWork();
+			}
 			break;
+
 		case ECitizenState::GoingToWork:
 			if (GetDistanceToStructureEntrance(CitizenPawn->GetWorkplace()) < DistanceToEnterStructure)
 			{
@@ -86,8 +97,21 @@ void ACitizenAIController::OnTimePassed(float HoursPassed)
 				CitizenPawn->SetCitizenState(ECitizenState::Working);
 			}
 			break;
+
 		case ECitizenState::Working:
+			if (!IsTimeToWork())
+			{
+				if (!CitizenPawn->IsHomeless())
+				{
+					GoToHome();
+				}
+				else
+				{
+					MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
+				}
+			}
 			break;
+
 		default:
 			break;
 		}
@@ -96,24 +120,16 @@ void ACitizenAIController::OnTimePassed(float HoursPassed)
 
 void ACitizenAIController::OnWorkTimeStarted()
 {
-	if (CitizenPawn && CitizenPawn->IsEmployed() && CitizenPawn->GetCitizenState() != ECitizenState::Working)
-	{
-		GoToWork();
-	}
+
 }
 
 void ACitizenAIController::OnWorkTimeEnded()
 {
-	if (CitizenPawn && !CitizenPawn->IsHomeless() && CitizenPawn->GetCitizenState() != ECitizenState::AtHome)
-	{
-		GoToHome();
-	}
+
 }
 
 void ACitizenAIController::OnPawnAssignedHome(AStructure* AssignedHome)
 {
-	// BlackboardComponent->SetValueAsVector(BBKey_HomeLocation, AssignedHome->GetEntranceLocation());
-
 	if (!IsTimeToWork() || !CitizenPawn->IsEmployed())
 	{
 		GoToHome();
@@ -122,13 +138,9 @@ void ACitizenAIController::OnPawnAssignedHome(AStructure* AssignedHome)
 
 void ACitizenAIController::OnPawnClearedHome()
 {
-	// BlackboardComponent->ClearValue(BBKey_HomeLocation);
-
-	if (CitizenPawn && CitizenPawn->GetCitizenState() == ECitizenState::AtHome)
-	{
-		CitizenPawn->ExitStructure();
-		MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
-	}
+	CitizenPawn->ExitStructure();
+	StopMovement();
+	Roam();
 }
 
 void ACitizenAIController::OnPawnAssignedWorkplace(AStructure* AssignedWorkplace)
@@ -143,15 +155,18 @@ void ACitizenAIController::OnPawnAssignedWorkplace(AStructure* AssignedWorkplace
 
 void ACitizenAIController::OnPawnClearedWorkplace()
 {
-	if (CitizenPawn && !CitizenPawn->IsHomeless())
+	if (!CitizenPawn) return;
+
+	CitizenPawn->ExitStructure();
+	StopMovement();
+
+	if (CitizenPawn->IsHomeless())
 	{
-		CitizenPawn->ExitStructure();
-		GoToHome();
+		Roam();
 	}
-	else if (CitizenPawn && CitizenPawn->GetCitizenState() == ECitizenState::Working)
+	else
 	{
-		CitizenPawn->ExitStructure();
-		MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
+		GoToHome();
 	}
 }
 
@@ -159,16 +174,18 @@ void ACitizenAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFo
 {
 	Super::OnMoveCompleted(RequestID, Result);
 
-	// if (CitizenPawn && CitizenPawn->GetCitizenState() == ECitizenState::Roaming)
-	// {
-	// 	MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
-	// }
+	if (CitizenPawn && CitizenPawn->GetCitizenState() == ECitizenState::Roaming)
+	{
+		const float TimerDuration = FMath::RandRange(MinTimeBetweenRoam, MaxTimeBetweenRoam);
+		GetWorld()->GetTimerManager().SetTimer(RoamingDelayTimer, this, &ThisClass::Roam, TimerDuration);
+	}
 }
 
 void ACitizenAIController::GoToHome()
 {
 	if (CitizenPawn && CitizenPawn->GetHome())
 	{
+		CitizenPawn->ExitStructure();
 		const FVector TargetLocation = CitizenPawn->GetHome()->GetEntranceLocation();
 		CitizenPawn->SetCitizenState(ECitizenState::GoingHome);
 		MoveToLocation(TargetLocation, 50.0f);
@@ -179,15 +196,22 @@ void ACitizenAIController::GoToWork()
 {
 	if (CitizenPawn && CitizenPawn->GetWorkplace())
 	{
+		CitizenPawn->ExitStructure();
 		const FVector TargetLocation = CitizenPawn->GetWorkplace()->GetEntranceLocation();
 		CitizenPawn->SetCitizenState(ECitizenState::GoingToWork);
 		MoveToLocation(TargetLocation, 50.0f);
 	}
 }
 
-void ACitizenAIController::MoveToRandomPointInRadius(const FVector Origin, const float Radius)
+void ACitizenAIController::Roam()
 {
 	CitizenPawn->SetCitizenState(ECitizenState::Roaming);
+	MoveToRandomPointInRadius(CitizenPawn->GetActorLocation(), RoamingRadius);
+}
+
+void ACitizenAIController::MoveToRandomPointInRadius(const FVector Origin, const float Radius)
+{
+	if (!CitizenPawn) return;
 
 	if (const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
 	{

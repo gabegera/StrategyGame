@@ -4,6 +4,7 @@
 #include "ResourceNode.h"
 
 #include "Components/LookAtCameraTextRenderComponent.h"
+#include "DataAssets/ResourceDataAsset.h"
 
 
 // Sets default values
@@ -19,13 +20,27 @@ AResourceNode::AResourceNode()
 	StaticMesh->SetupAttachment(SceneComponent);
 	StaticMesh->SetCollisionProfileName("SelectableObject");
 	StaticMesh->SetGenerateOverlapEvents(true);
+
+	// ResourceText = CreateDefaultSubobject<ULookAtCameraTextRenderComponent>("Text");
+	// ResourceText->SetupAttachment(StaticMesh);
+	// ResourceText->HorizontalAlignment = EHorizTextAligment::EHTA_Center;
+	// ResourceText->VerticalAlignment = EVerticalTextAligment::EVRTA_TextBottom;
+	// ResourceText->WorldSize = 156.0f;
 }
 
 // Called when the game starts or when spawned
 void AResourceNode::BeginPlay()
 {
 	Super::BeginPlay();
-	
+}
+
+void AResourceNode::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	// const FVector ResourceTextLocation = FVector::UpVector * (StaticMesh->Bounds.BoxExtent.Z * 2.0f) + 10.0f;
+	// ResourceText->SetRelativeLocation(ResourceTextLocation);
+	// UpdateResourceText();
 }
 
 float AResourceNode::TryDrainResource(const float DrainAmount)
@@ -43,6 +58,15 @@ float AResourceNode::TryGetResourceAmount()
 	return GetResourceAmount();
 }
 
+// void AResourceNode::UpdateResourceText() const
+// {
+// 	if (ResourceType)
+// 	{
+// 		FString ResourceString = ResourceType->GetResourceName().ToString() + ": " + FString::SanitizeFloat(ResourceAmount);
+// 		ResourceText->Text = FText::FromString(ResourceString);
+// 	}
+// }
+
 float AResourceNode::DrainResource(const float DrainAmount)
 {
 	const float AmountBeforeDrain = ResourceAmount;
@@ -54,6 +78,7 @@ float AResourceNode::DrainResource(const float DrainAmount)
 		Destroy();
 	}
 
+	// UpdateResourceText();
 	return AmountDrained;
 }
 

@@ -25,6 +25,12 @@ protected:
 
 	virtual void NativeConstruct() override;
 
+	UFUNCTION(BlueprintImplementableEvent, DisplayName="On Structure Selected", Category="Strategy Widget")
+	void OnStructureSelected(AStructure* SelectedStructure);
+
+	UFUNCTION(BlueprintImplementableEvent, DisplayName="On Structure DeSelected", Category="Strategy Widget")
+	void OnStructureDeSelected();
+
 public:
 
 	UFUNCTION(BlueprintGetter, Category="Strategy Widget|Getters")

@@ -50,6 +50,7 @@ void UWorkersComponent::RequestWorker(const ECitizenType RequestedWorkerType)
 {
 	if (OwningStructure && !IsFullCapacity() && IsWorkerAllowed(RequestedWorkerType))
 	{
+		bPendingNewWorker = true;
 		GetWorld()->GetGameInstance<UStrategyGameInstance>()->OnWorkerRequested.Broadcast(OwningStructure, this, RequestedWorkerType);
 	}
 }
@@ -62,21 +63,69 @@ void UWorkersComponent::RequestNumOfWorkers(const int32 RequestedNumOfWorkers, c
 	}
 }
 
+bool UWorkersComponent::CanCitizenTypeBeEmployed(const ECitizenType InCitizenType)
+{
+	return AllowedWorkerTypes.FindOrAdd(InCitizenType, false);
+}
+
 void UWorkersComponent::OnStructureBuilt(AStructure* BuiltStructure)
 {
 	Super::OnStructureBuilt(BuiltStructure);
+}
 
-	if (BuiltStructure == OwningStructure)
+void UWorkersComponent::OnStructureDestroyed(AStructure* DestroyedStructure)
+{
+	Super::OnStructureDestroyed(DestroyedStructure);
+
+	if (DestroyedStructure == OwningStructure)
 	{
-		RequestNumOfWorkers(MaxNumOfWorkers, ECitizenType::Worker);
+
 	}
 }
 
-void UWorkersComponent::AssignWorker(ACitizen* InWorker)
+bool UWorkersComponent::AssignWorker(ACitizen* InWorker)
 {
-	if (!IsFullCapacity())
+	if (!IsFullCapacity() && bPendingNewWorker)
 	{
 		AssignedWorkers.Add(InWorker);
+		bPendingNewWorker = false;
+		return true;
+	}
+
+	return false;
+}
+
+void UWorkersComponent::RemoveWorkerOfType(const ECitizenType InCitizenType)
+{
+	for (ACitizen* Citizen : AssignedWorkers.Array())
+	{
+		if (Citizen->GetCitizenType() == InCitizenType)
+		{
+			RemoveWorker(Citizen);
+
+			return;
+		}
+	}
+}
+
+void UWorkersComponent::RemoveWorker(ACitizen* InCitizen)
+{
+	if (InCitizen)
+	{
+		AssignedWorkers.Remove(InCitizen);
+		InCitizen->ClearWorkplace();
+		AssignedWorkers.Shrink();
+	}
+}
+
+void UWorkersComponent::ClearWorkers()
+{
+	for (ACitizen* Citizen : AssignedWorkers)
+	{
+		if (Citizen)
+		{
+			RemoveWorker(Citizen);
+		}
 	}
 }
 

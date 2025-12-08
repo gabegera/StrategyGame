@@ -9,7 +9,7 @@
 
 class ACitizen;
 
-UCLASS(ClassGroup=(StructureComponents))
+UCLASS(BlueprintType, ClassGroup=(StructureComponents))
 class STRATEGYGAME_API UHousingComponent : public UStructureComponent
 {
 	GENERATED_BODY()

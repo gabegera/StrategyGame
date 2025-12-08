@@ -7,7 +7,7 @@
 #include "WorkersComponent.generated.h"
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class STRATEGYGAME_API UWorkersComponent : public UStructureComponent
 {
 	GENERATED_BODY()
@@ -21,6 +21,9 @@ protected:
 	// If set to 0 no workers are needed.
 	UPROPERTY(EditAnywhere, Category="Workers")
 	int32 MaxNumOfWorkers = 0;
+
+	UPROPERTY()
+	bool bPendingNewWorker = false;
 
 	// If set to true that citizen type is allowed to work here.
 	UPROPERTY(EditAnywhere, Category="Workers", meta=(EditCondition="MaxNumOfWorkers > 0", EditConditionHides))
@@ -38,14 +41,30 @@ protected:
 
 	virtual void OnStructureBuilt(AStructure* BuiltStructure) override;
 
+	virtual void OnStructureDestroyed(AStructure* DestroyedStructure) override;
+
 public:
 
+	UFUNCTION(BlueprintCallable, Category="Workers")
 	virtual void RequestWorker(ECitizenType RequestedWorkerType);
 
+	UFUNCTION(BlueprintCallable, Category="Workers")
 	virtual void RequestNumOfWorkers(int32 RequestedNumOfWorkers, ECitizenType RequestedWorkerType);
 
+	UFUNCTION(BlueprintPure, Category="Workers")
+	bool CanCitizenTypeBeEmployed(ECitizenType InCitizenType);
+
 	UFUNCTION(BlueprintCallable, Category="Workers")
-	void AssignWorker(ACitizen* InWorker);
+	bool AssignWorker(ACitizen* InWorker);
+
+	UFUNCTION(BlueprintCallable, Category="Workers")
+	void RemoveWorkerOfType(ECitizenType InCitizenType);
+
+	UFUNCTION(BlueprintCallable, Category="Workers")
+	void RemoveWorker(ACitizen* InCitizen);
+
+	UFUNCTION(BlueprintCallable, Category="Workers")
+	void ClearWorkers();
 
 	UFUNCTION(BlueprintPure)
 	bool IsFullCapacity() const;

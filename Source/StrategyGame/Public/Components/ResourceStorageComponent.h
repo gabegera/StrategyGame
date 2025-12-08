@@ -8,7 +8,7 @@
 
 class UResourceDataAsset;
 
-UCLASS(ClassGroup=StructureComponents)
+UCLASS(BlueprintType, ClassGroup=StructureComponents)
 class STRATEGYGAME_API UResourceStorageComponent : public UStructureComponent
 {
 	GENERATED_BODY()

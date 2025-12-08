@@ -91,7 +91,12 @@ void UResourceHarvestingComponent::HarvestNearbyResources(const float HoursPasse
 					DrainAmount = ResourcesToHarvestPerHour.FindRef(ResourceType) * HoursPassed;
 				}
 
-				GetWorld()->GetGameInstance()->GetSubsystem<UResourcesSubsystem>()->AddResources(ResourceType, ResourcesInterface->TryDrainResource(DrainAmount));
+				UResourcesSubsystem* ResourcesSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UResourcesSubsystem>();
+				if (!ResourcesSubsystem->IsResourceFullCapacity(ResourceType))
+				{
+					ResourcesSubsystem->AddResources(ResourceType, ResourcesInterface->TryDrainResource(DrainAmount));
+				}
+
 
 				// Returns so that only one resource gets drained at a time.
 				return;

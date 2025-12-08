@@ -7,7 +7,7 @@
 
 ARemoteControlTurret::ARemoteControlTurret()
 {
-	BuildingBounds->SetVisibility(false);
+	StructureBounds->SetVisibility(false);
 	
 	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("Scene Capture");
 	SceneCapture->SetupAttachment(TurretMesh);

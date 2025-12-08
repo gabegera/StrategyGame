@@ -10,7 +10,7 @@ class UWorkersComponent;
 class UResourceDataAsset;
 class USphereComponent;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class STRATEGYGAME_API UResourceHarvestingComponent : public UStructureComponent
 {
 	GENERATED_BODY()

@@ -54,7 +54,7 @@ protected:
 	virtual void OnResidentRequested(AStructure* StructureSource, UHousingComponent* Housing);
 
 	UFUNCTION()
-	virtual void OnWorkerRequested(AStructure* StructureSource, UWorkersComponent* Workers, ECitizenType RequestedCitizenType);
+	virtual void OnWorkerRequested(AStructure* StructureSource, UWorkersComponent* WorkersComponent, ECitizenType RequestedCitizenType);
 
 public:
 

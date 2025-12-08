@@ -10,7 +10,7 @@ class UWorkersComponent;
 class UResourceDataAsset;
 class UResourcesSubsystem;
 
-UCLASS(ClassGroup=StructureComponents)
+UCLASS(BlueprintType, ClassGroup=StructureComponents)
 class STRATEGYGAME_API UResourceGenerationComponent : public UStructureComponent
 {
 	GENERATED_BODY()

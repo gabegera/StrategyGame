@@ -84,12 +84,14 @@ void ACitizen::OnResidentRequested(AStructure* StructureSource, UHousingComponen
     }
 }
 
-void ACitizen::OnWorkerRequested(AStructure* StructureSource, UWorkersComponent* Workers, const ECitizenType RequestedCitizenType)
+void ACitizen::OnWorkerRequested(AStructure* StructureSource, UWorkersComponent* WorkersComponent, const ECitizenType RequestedCitizenType)
 {
-    if (Workers && CitizenType == RequestedCitizenType && !Workers->IsFullCapacity() && !IsEmployed())
+    if (WorkersComponent && CitizenType == RequestedCitizenType && !WorkersComponent->IsFullCapacity() && !IsEmployed())
     {
-    	AssignWorkplace(StructureSource);
-    	Workers->AssignWorker(this);
+    	if (WorkersComponent->AssignWorker(this))
+    	{
+    		AssignWorkplace(StructureSource);
+    	}
     }
 }
 

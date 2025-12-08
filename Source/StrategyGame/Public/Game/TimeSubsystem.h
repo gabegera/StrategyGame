@@ -45,11 +45,11 @@ protected:
 	int32 DaysCitySurvived = 0;
 
 	// At what time of day the citizens will start their work day.
-	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance", meta=(ClampMin=0.0f, ClampMax=23.5))
+	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance", meta=(ClampMin=0.0f, ClampMax=24.0f))
 	float WorkStartTime = 8.0f;
 
 	// At what time of day the citizens will end their work day and go home.
-	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance", meta=(ClampMin=0.0f, ClampMax=23.5))
+	UPROPERTY(EditDefaultsOnly, Category="Strategy Game Instance", meta=(ClampMin=0.0f, ClampMax=24.0f))
 	float WorkEndTime = 20.0f;
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;

@@ -10,6 +10,7 @@
 #include "Interfaces/StructureInterface.h"
 #include "Structure.generated.h"
 
+class UWorkersComponent;
 class ULookAtCameraTextRenderComponent;
 class UArrowComponent;
 enum class EUpdateTransformFlags : int32;
@@ -54,7 +55,7 @@ protected:
 	UStaticMeshComponent* StaticMeshComponent;
 	
 	UPROPERTY(BlueprintReadWrite, Category="Structure|Components")
-	UBoxComponent* BuildingBounds;
+	UBoxComponent* StructureBounds;
 
 	UPROPERTY(EditAnywhere)
 	UArrowComponent* StructureEntranceArrow;
@@ -78,7 +79,7 @@ protected:
 	EStructureState StructureState = EStructureState::ConstructionComplete;
 	
 	UPROPERTY()
-	TArray<AActor*> OverlappingExclusionZones;
+	bool bIsOverlappingObject = false;
 
 	// ------ CONSTRUCTION ------
 
@@ -129,14 +130,17 @@ protected:
 
 	void OnMeshLoaded(const TSoftObjectPtr<UStaticMesh> LoadedMesh) const;
 
-	UFUNCTION()
-	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	
-	UFUNCTION()
-	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	// UFUNCTION()
+	// virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	//
+	// UFUNCTION()
+	// virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	UFUNCTION()
 	virtual void OnStructureStateChanged(AStructure* Structure, EStructureState NewStructureState);
+
+	UFUNCTION()
+	void CheckForCollisions();
 
 public:
 
@@ -205,13 +209,10 @@ public:
 	bool IsConstructionComplete() const { return StructureState == EStructureState::ConstructionComplete; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsOverlappingBuildExclusionZone() { return !OverlappingExclusionZones.IsEmpty(); }
+	bool IsOverlappingObject() const { return bIsOverlappingObject; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	virtual bool IsBuildingPermitted();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	TArray<AActor*> GetOverlappingBuildExclusionZones() { return OverlappingExclusionZones; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool HaveEnoughResourcesToBuild();
