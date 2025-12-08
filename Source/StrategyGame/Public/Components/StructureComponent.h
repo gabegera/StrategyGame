@@ -12,7 +12,7 @@ class AStructure;
 
 // The Base Class for a component that is meant to be attached to a structure class.
 // The component activates only when the structure it's attached to has finished construction.
-UCLASS(Abstract, Within=Structure)
+UCLASS(Abstract)
 class STRATEGYGAME_API UStructureComponent : public UActorComponent
 {
 	GENERATED_BODY()
