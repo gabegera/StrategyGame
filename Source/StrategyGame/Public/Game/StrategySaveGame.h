@@ -84,10 +84,43 @@ struct FCitizenSave
 	{
 		FString OutString = "Class: ";
 		OutString.Append(CitizenClass->GetName());
-		OutString.Append(", StructureTransform: ");
+		OutString.Append(", CitizenTransform: ");
 		OutString.Append(CitizenTransform.ToString());
-		OutString.Append(", Structure State: ");
+		OutString.Append(", CitizenType: ");
 		OutString.Append(UEnum::GetDisplayValueAsText(CitizenType).ToString());
+		OutString.Append(", CitizenState: ");
+		OutString.Append(UEnum::GetDisplayValueAsText(CitizenState).ToString());
+		OutString.Append(", Home: ");
+		OutString.Append(HomeName);
+		OutString.Append(", Workplace: ");
+		OutString.Append(WorkplaceName);
+
+		return OutString;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FResourceNodeSave
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TSubclassOf<AResourceNode> ResourceClass;
+
+	UPROPERTY()
+	FTransform ResourceTransform;
+
+	UPROPERTY()
+	float ResourceAmount;
+
+	FString ToString() const
+	{
+		FString OutString = "Class: ";
+		OutString.Append(ResourceClass->GetName());
+		OutString.Append(", ResourceTransform: ");
+		OutString.Append(ResourceTransform.ToString());
+		OutString.Append(", ResourceAmount: ");
+		OutString.Append(FString::SanitizeFloat(ResourceAmount));
 
 		return OutString;
 	}
@@ -111,6 +144,15 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="Save File")
 	FPlayerSave PlayerSave;
+
+	UPROPERTY(BlueprintReadOnly, Category="Save File")
+	TArray<FStructureSave> SavedStructures;
+
+	UPROPERTY(BlueprintReadOnly, Category="Save File")
+	TArray<FCitizenSave> SavedCitizens;
+
+	UPROPERTY(BlueprintReadOnly, Category="Save File")
+	TArray<FResourceNodeSave> SavedResourceNodes;
  
 	UPROPERTY(BlueprintReadOnly, Category="Save File")
 	float TimeOfDay;
@@ -119,14 +161,8 @@ public:
 	int32 DaysCityHasSurvived;
 
 	UPROPERTY(BlueprintReadOnly, Category="Save File")
-	TArray<FStructureSave> SavedStructures;
-
-	UPROPERTY(BlueprintReadOnly, Category="Save File")
-	TMap<UResourceDataAsset*, float> Resources;
+	TMap<UResourceDataAsset*, float> CityResources;
 
 	UPROPERTY(BlueprintReadOnly, Category="Save File")
 	TSet<UUpgradeDataAsset*> UnlockedUpgrades;
-
-	UPROPERTY(BlueprintReadOnly, Category="Save File")
-	TArray<FCitizenSave> SavedCitizens;
 };

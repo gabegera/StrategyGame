@@ -37,9 +37,13 @@ void UStrategyGameInstance::OnSaveLoaded(const FString& SlotName, const int32 Us
 	LoadCitizensDelegate.BindUObject(this, &ThisClass::LoadSavedCitizens, LoadedSave->SavedCitizens);
 	GetTimerManager().SetTimerForNextTick(LoadCitizensDelegate);
 
+	FTimerDelegate LoadResourcesDelegate;
+	LoadResourcesDelegate.BindUObject(this, &ThisClass::LoadSavedResourceNodes, LoadedSave->SavedResourceNodes);
+	GetTimerManager().SetTimerForNextTick(LoadResourcesDelegate);
+
 	GetSubsystem<UTimeSubsystem>()->SetTimeOfDay(LoadedSave->TimeOfDay);
 	GetSubsystem<UTimeSubsystem>()->SetDaysCityHasSurvived(LoadedSave->DaysCityHasSurvived);
-	GetSubsystem<UResourcesSubsystem>()->SetResourceInventory(LoadedSave->Resources);
+	GetSubsystem<UResourcesSubsystem>()->SetResourceInventory(LoadedSave->CityResources);
 	GetSubsystem<UUnlocksSubsystem>()->SetUnlockedUpgrades(LoadedSave->UnlockedUpgrades);
 
 	UKismetSystemLibrary::PrintString(GetWorld(), "Save Loaded");
@@ -70,12 +74,14 @@ void UStrategyGameInstance::LoadSavedStructures(const TArray<FStructureSave> Sav
 
 void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCitizens)
 {
+	// Spawns all saved citizens.
 	for (FCitizenSave SavedCitizen : SavedCitizens)
 	{
 		ACitizen* SpawnedCitizen = GetWorld()->SpawnActorDeferred<ACitizen>(SavedCitizen.CitizenClass, FTransform());
 		SpawnedCitizen->SetCitizenType(SavedCitizen.CitizenType);
 		SpawnedCitizen->SetCitizenState(SavedCitizen.CitizenState);
 
+		// If the citizen has either a home or a workplace, finds them and assigns them.
 		if (SavedCitizen.HomeName != "" || SavedCitizen.WorkplaceName != "")
 		{
 			TArray<AActor*> AllStructures;
@@ -88,6 +94,8 @@ void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCi
 					{
 						HousingComponent->AssignResident(SpawnedCitizen);
 						SpawnedCitizen->AssignHome(Cast<AStructure>(Structure));
+
+						if (SpawnedCitizen->IsEmployed() || SavedCitizen.WorkplaceName == "") break; // Early breaks to prevent iterating for longer than needed.
 					}
 				}
 
@@ -97,6 +105,7 @@ void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCi
 					{
 						WorkersComponent->AssignWorker(SpawnedCitizen);
 						SpawnedCitizen->AssignWorkplace(Cast<AStructure>(Structure));
+						if (!SpawnedCitizen->IsHomeless() || SavedCitizen.HomeName == "") break; // Early breaks to prevent iterating for longer than needed.
 					}
 				}
 			}
@@ -125,6 +134,28 @@ void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCi
 	}
 }
 
+void UStrategyGameInstance::LoadSavedResourceNodes(const TArray<FResourceNodeSave> SavedResources)
+{
+	// Destroy all pre-existing resources to make room the loaded ones.
+	TArray<AActor*> AllResources;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AResourceNode::StaticClass(), AllResources);
+	for (AActor* Resource : AllResources)
+	{
+		if (Resource)
+		{
+			Resource->Destroy();
+		}
+	}
+
+	// Spawn all saved resources.
+	for (FResourceNodeSave Resource : SavedResources)
+	{
+		AResourceNode* SpawnedResource = GetWorld()->SpawnActorDeferred<AResourceNode>(Resource.ResourceClass, FTransform());
+		SpawnedResource->SetResourceAmount(Resource.ResourceAmount);
+		SpawnedResource->FinishSpawning(Resource.ResourceTransform);
+	}
+}
+
 void UStrategyGameInstance::SaveGame()
 {
 	if (UStrategySaveGame* SaveGameInstance = Cast<UStrategySaveGame>(UGameplayStatics::CreateSaveGameObject(UStrategySaveGame::StaticClass())))
@@ -142,7 +173,7 @@ void UStrategyGameInstance::SaveGame()
 		// Save Game Data
 		SaveGameInstance->TimeOfDay = GetSubsystem<UTimeSubsystem>()->GetTimeOfDay();
 		SaveGameInstance->DaysCityHasSurvived = GetSubsystem<UTimeSubsystem>()->GetDaysCityHasSurvived();
-		SaveGameInstance->Resources = GetSubsystem<UResourcesSubsystem>()->GetResourceInventory();
+		SaveGameInstance->CityResources = GetSubsystem<UResourcesSubsystem>()->GetResourceInventory();
 		SaveGameInstance->UnlockedUpgrades = GetSubsystem<UUnlocksSubsystem>()->GetUnlockedUpgrades();
 
 		// Save All Built Structures.
@@ -203,7 +234,24 @@ void UStrategyGameInstance::SaveGame()
 
 			SaveGameInstance->SavedCitizens.Add(SavedCitizen);
 		}
- 
+
+		// Save All Resource Nodes
+		TArray<AActor*> AllResources;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AResourceNode::StaticClass(), AllResources);
+		for (AActor* Actor : AllResources)
+		{
+			const AResourceNode* Resource  = Cast<AResourceNode>(Actor);
+
+			FResourceNodeSave SavedResource;
+			SavedResource.ResourceClass = Resource->GetClass();
+			SavedResource.ResourceTransform = Resource->GetTransform();
+			SavedResource.ResourceAmount = Resource->GetResourceAmount();
+
+			UKismetSystemLibrary::LogString(SavedResource.ToString(), true);
+
+			SaveGameInstance->SavedResourceNodes.Add(SavedResource);
+		}
+
 		// Start async save process.
 		const FString SlotNameString = "save";
 		constexpr int32 UserIndexInt32 = 0;

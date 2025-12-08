@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "StrategyGameInstance.generated.h"
 
+struct FResourceNodeSave;
 class UStrategySaveGame;
 struct FCitizenSave;
 class UWorkersComponent;
@@ -49,6 +50,9 @@ class STRATEGYGAME_API UStrategyGameInstance : public UGameInstance
 
 	UFUNCTION()
 	virtual void LoadSavedCitizens(const TArray<FCitizenSave> SavedCitizens);
+
+	UFUNCTION()
+	virtual void LoadSavedResourceNodes(const TArray<FResourceNodeSave> SavedResources);
 
 public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)

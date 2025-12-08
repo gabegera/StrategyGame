@@ -57,6 +57,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetResourceAmount() const;
+
+	UFUNCTION(BlueprintCallable)
+	float SetResourceAmount(float InAmount);
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UResourceDataAsset* GetResourceType() const;

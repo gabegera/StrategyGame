@@ -87,6 +87,11 @@ float AResourceNode::GetResourceAmount() const
 	return ResourceAmount;
 }
 
+float AResourceNode::SetResourceAmount(float InAmount)
+{
+	return ResourceAmount = InAmount;
+}
+
 UResourceDataAsset* AResourceNode::GetResourceType() const
 {
 	return ResourceType;
