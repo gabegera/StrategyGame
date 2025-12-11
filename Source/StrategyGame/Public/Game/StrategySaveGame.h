@@ -19,6 +19,12 @@ struct FPlayerSave
 
 	UPROPERTY()
 	FTransform PlayerTransform;
+
+	UPROPERTY()
+	FTransform RTSCameraTransform;
+
+	UPROPERTY()
+	float RTSCameraZoom;
 };
 
 USTRUCT(BlueprintType)

@@ -23,9 +23,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Automated Turret")
 	USphereComponent* SphereComponent;
 
-	UPROPERTY()
-	FTimerHandle ScanForEnemiesTimer;
-
 	UPROPERTY(VisibleAnywhere, Category="Automated Turret")
 	AActor* TargetEnemy = nullptr;
 	

@@ -145,19 +145,19 @@ protected:
 	UFUNCTION()
 	void OnControllerModeChanged(EControllerMode NewControllerMode);
 
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnControllerModeChanged")
+	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnControllerModeChanged")
 	void BP_OnControllerModeChanged(EControllerMode NewControllerMode);
 
 	UFUNCTION()
 	void OnGamePaused();
 
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnGamePaused")
+	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnGamePaused")
 	void BP_OnGamePaused();
 
 	UFUNCTION()
 	void OnGameUnPaused();
 
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, DisplayName="OnGameUnPaused")
+	UFUNCTION(BlueprintImplementableEvent, DisplayName="OnGameUnPaused")
 	void BP_OnGameUnPaused();
 
 public:

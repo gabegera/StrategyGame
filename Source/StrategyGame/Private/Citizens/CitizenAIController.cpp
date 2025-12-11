@@ -43,10 +43,16 @@ void ACitizenAIController::OnPossess(APawn* InPawn)
 
 	CitizenPawn = Cast<ACitizen>(InPawn);
 
-	CitizenPawn->OnHomeAssigned.AddUniqueDynamic(this, &ThisClass::OnPawnAssignedHome);
-    CitizenPawn->OnHomeCleared.AddUniqueDynamic(this, &ThisClass::OnPawnClearedHome);
-    CitizenPawn->OnWorkplaceAssigned.AddUniqueDynamic(this, &ThisClass::OnPawnAssignedWorkplace);
-    CitizenPawn->OnWorkplaceCleared.AddUniqueDynamic(this, &ThisClass::OnPawnClearedWorkplace);
+	ensureAlwaysMsgf(CitizenPawn, TEXT("ACitizenAIController::OnPossess failed to cast pawn to ACitizen"));
+	if (CitizenPawn)
+	{
+		CitizenPawn->OnHomeAssigned.AddUniqueDynamic(this, &ThisClass::OnPawnAssignedHome);
+	    CitizenPawn->OnHomeCleared.AddUniqueDynamic(this, &ThisClass::OnPawnClearedHome);
+	    CitizenPawn->OnWorkplaceAssigned.AddUniqueDynamic(this, &ThisClass::OnPawnAssignedWorkplace);
+	    CitizenPawn->OnWorkplaceCleared.AddUniqueDynamic(this, &ThisClass::OnPawnClearedWorkplace);
+	}
+
+	Roam();
 
 	// ACitizen* PossessedCitizen = Cast<ACitizen>(InPawn);
 	// if (PossessedCitizen && BehaviorTree)

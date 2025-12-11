@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "StrategyGameInstance.generated.h"
 
+struct FPlayerSave;
 struct FResourceNodeSave;
 class UStrategySaveGame;
 struct FCitizenSave;
@@ -22,6 +23,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStructureSelectedSignature, AStruct
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStructureDeSelectedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FResidentRequestedSignature, AStructure*, Home, UHousingComponent*, Housing);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FWorkerRequestedSignature, AStructure*, Workplace, UWorkersComponent*, WorkersComponent, ECitizenType, WorkerType);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FGameSavedSignature, const FString, SlotName, const int32, UserIndex, bool, bSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSaveLoadedSignature, const FString, SlotName, const int32, UserIndex, USaveGame*, LoadedGameData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGamePausedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameUnPausedSignature);
 
 /**
  * 
@@ -46,13 +52,19 @@ class STRATEGYGAME_API UStrategyGameInstance : public UGameInstance
 	virtual void OnSaveLoaded(const FString& SlotName, const int32 UserIndex, USaveGame* LoadedGameData);
 
 	UFUNCTION()
-	virtual void LoadSavedStructures(const TArray<FStructureSave> SavedStructures);
+	void LoadSavedStructures(const TArray<FStructureSave> SavedStructures);
 
 	UFUNCTION()
-	virtual void LoadSavedCitizens(const TArray<FCitizenSave> SavedCitizens);
+	void LoadSavedCitizens(const TArray<FCitizenSave> SavedCitizens);
 
 	UFUNCTION()
-	virtual void LoadSavedResourceNodes(const TArray<FResourceNodeSave> SavedResources);
+	void LoadSavedResourceNodes(const TArray<FResourceNodeSave> SavedResources);
+
+	UFUNCTION()
+	void LoadPlayer(const FPlayerSave PlayerSave);
+
+	UFUNCTION()
+	void BroadcastFinishedLoading(const FString SlotName, const int32 UserIndex, USaveGame* LoadedGameData) const;
 
 public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
@@ -72,6 +84,18 @@ public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 	FWorkerRequestedSignature OnWorkerRequested;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FGameSavedSignature OnGameFinishedSaving;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FSaveLoadedSignature OnFinishedLoadingSave;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FGamePausedSignature OnGamePaused;
+
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FGameUnPausedSignature OnGameUnPaused;
 
 	UFUNCTION(BlueprintPure, Category="Strategy Game Instance")
 	int32 GetGridSize() const { return GridSize; }

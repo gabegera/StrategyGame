@@ -140,6 +140,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AStructure* SetSelectedStructure(AStructure* NewSelectedStructure) { return SelectedStructure = NewSelectedStructure; }
 
+	UFUNCTION(BlueprintCallable)
+	void SetZoom(float InZoom);
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FVector SnapVectorToGrid(FVector InputPos, int32 GridSize);
 
@@ -150,6 +153,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	AStructure* GetSelectedStructure() { return SelectedStructure; }
+
+	UFUNCTION(BlueprintPure)
+	float GetZoom() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetMinZoomHeight() { return ZoomDistanceMin; }

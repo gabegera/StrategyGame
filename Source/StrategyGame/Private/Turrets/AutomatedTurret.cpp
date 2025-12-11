@@ -19,31 +19,28 @@ AAutomatedTurret::AAutomatedTurret()
 	SphereComponent = CreateDefaultSubobject<USphereComponent>("Turret Range");
 	SphereComponent->SetupAttachment(SceneComponent);
 	SphereComponent->SetCollisionProfileName("NoCollision");
+	SphereComponent->SetSphereRadius(4096.0f);
 }
 
 // Called when the game starts or when spawned
 void AAutomatedTurret::BeginPlay()
 {
 	Super::BeginPlay();
-
-	float TimerDuration = 0.2f;
-	bool Loops = true;
-	GetWorldTimerManager().SetTimer(ScanForEnemiesTimer, this, &ThisClass::ScanForEnemies, TimerDuration, Loops);
 }
 
 void AAutomatedTurret::ScanForEnemies()
 {
 	if (StructureState != EStructureState::ConstructionComplete) return;
 	
-	FVector TraceStart = SphereComponent->GetComponentLocation();
-	FVector TraceEnd = TraceStart;
-	float Radius = SphereComponent->GetScaledSphereRadius();
-	bool TraceComplex = false;
+	const FVector TraceStart = SphereComponent->GetComponentLocation();
+	const FVector TraceEnd = TraceStart;
+	const float Radius = SphereComponent->GetScaledSphereRadius();
+	constexpr bool bTraceComplex = false;
 	TArray<AActor*> ActorsToIgnore;
 
 	TArray<FHitResult> Hits;
 	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), TraceStart, TraceEnd, Radius, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		TraceComplex, ActorsToIgnore, EDrawDebugTrace::ForDuration, Hits, true, FLinearColor::Yellow, FLinearColor::Green, 0.2f);
+		bTraceComplex, ActorsToIgnore, EDrawDebugTrace::ForOneFrame, Hits, true, FLinearColor::Yellow, FLinearColor::Green);
 
 	AActor* ClosestEnemy = nullptr;
 	float ClosestEnemyDistance = SphereComponent->GetScaledSphereRadius();
@@ -63,7 +60,7 @@ void AAutomatedTurret::ScanForEnemies()
 
 void AAutomatedTurret::AimAtTarget(FVector TargetPos)
 {
-	FRotator LookAtTargetRotation = UKismetMathLibrary::FindLookAtRotation(TurretMesh->GetComponentLocation(), TargetPos);
+	const FRotator LookAtTargetRotation = UKismetMathLibrary::FindLookAtRotation(TurretMesh->GetComponentLocation(), TargetPos);
 	TurretMesh->SetWorldRotation(LookAtTargetRotation);
 }
 
@@ -71,9 +68,11 @@ void AAutomatedTurret::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	ScanForEnemies();
+
 	if (TargetEnemy)
 	{
-		AimAtTarget(TargetEnemy->GetActorLocation());
+		AimAtTarget(TargetEnemy->GetComponentByClass<UStaticMeshComponent>()->GetComponentLocation());
 		Fire();
 	}
 }

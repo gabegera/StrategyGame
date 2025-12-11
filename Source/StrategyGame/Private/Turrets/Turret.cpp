@@ -32,7 +32,8 @@ void ATurret::OnConstruction(const FTransform& Transform)
 	{
 		if (!Muzzle->IsAttachedTo(TurretMesh))
 		{
-			Muzzle->SetupAttachment(TurretMesh);
+			MuzzleLocations.Remove(Muzzle);
+			MuzzleLocations.Shrink();
 		}
 	}
 }
@@ -52,16 +53,16 @@ void ATurret::Fire()
 		FVector ShotStart = MuzzleLocations[i]->GetComponentLocation();
 		FVector ShotTarget = ShotStart + MuzzleLocations[i]->GetForwardVector() * 10000.0f;
 
-		bool ShouldStartFireRateTimer;
+		bool bShouldStartFireRateTimer;
 		if (i == MuzzleLocations.Num() - 1)
 		{
-			ShouldStartFireRateTimer = true;
+			bShouldStartFireRateTimer = true;
 		}
 		else
 		{
-			ShouldStartFireRateTimer = false;
+			bShouldStartFireRateTimer = false;
 		}
-		ShootingComponent->Shoot(ShotStart, ShotTarget, ShouldStartFireRateTimer);
+		ShootingComponent->Shoot(ShotStart, ShotTarget, bShouldStartFireRateTimer);
 	}
 }
 

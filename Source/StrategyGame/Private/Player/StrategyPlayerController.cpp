@@ -6,6 +6,7 @@
 #include "StrategyStatics.h"
 #include "EquippableItems/EquippableItem.h"
 #include "Game/ResourcesSubsystem.h"
+#include "Game/StrategyGameInstance.h"
 #include "Game/TimeSubsystem.h"
 #include "Game/UnlocksSubsystem.h"
 #include "Player/PlayerCharacter.h"
@@ -197,6 +198,10 @@ void AStrategyPlayerController::BeginPlay()
 	RTSCamera = Cast<ARTSCamera>(UGameplayStatics::GetActorOfClass(this, ARTSCamera::StaticClass()));
 
 	OnControllerModeChangedDelegate.AddUniqueDynamic(this, &ThisClass::OnControllerModeChanged);
+
+	UStrategyGameInstance* GameInstance = GetGameInstance<UStrategyGameInstance>();
+	GameInstance->OnGamePaused.AddUniqueDynamic(this, &ThisClass::OnGamePaused);
+	GameInstance->OnGameUnPaused.AddUniqueDynamic(this, &ThisClass::OnGameUnPaused);
 }
 
 void AStrategyPlayerController::OnPossess(APawn* InPawn)
@@ -247,10 +252,12 @@ void AStrategyPlayerController::Exit()
 		if (IsPaused())
 		{
 			SetPause(false);
+			GetGameInstance<UStrategyGameInstance>()->OnGameUnPaused.Broadcast();
 		}
 		else
 		{
 			SetPause(true);
+			GetGameInstance<UStrategyGameInstance>()->OnGamePaused.Broadcast();
 		}
 		break;
 	}

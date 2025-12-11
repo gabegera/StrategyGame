@@ -54,6 +54,8 @@ void UResourceHarvestingComponent::OnTimePassed(const float HoursPassed)
 
 void UResourceHarvestingComponent::HarvestNearbyResources(const float HoursPassed)
 {
+	if (!OwningStructure->IsConstructionComplete()) return;
+
 	const FVector TraceStart = SphereComponent->GetComponentLocation();
 	const FVector TraceEnd = TraceStart;
 	const float Radius = SphereComponent->GetScaledSphereRadius();

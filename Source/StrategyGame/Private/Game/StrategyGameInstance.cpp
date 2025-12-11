@@ -14,10 +14,13 @@
 #include "Game/TimeSubsystem.h"
 #include "Game/UnlocksSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/RTSCamera.h"
 
 void UStrategyGameInstance::OnGameSaved(const FString& SlotName, const int32 UserIndex, bool bSuccess)
 {
 	UKismetSystemLibrary::PrintString(GetWorld(), "Game Saved");
+
+	OnGameFinishedSaving.Broadcast(SlotName, UserIndex, bSuccess);
 }
 
 void UStrategyGameInstance::OnSaveLoaded(const FString& SlotName, const int32 UserIndex, USaveGame* LoadedGameData)
@@ -26,27 +29,32 @@ void UStrategyGameInstance::OnSaveLoaded(const FString& SlotName, const int32 Us
 
 	UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), LoadedSave->Level);
 
-	GetWorld()->GetFirstPlayerController()->GetPawn()->SetActorTransform(LoadedSave->PlayerSave.PlayerTransform);
-
-	// For some reason the saved structures won't spawn unless scheduled for the next tick.
-	FTimerDelegate LoadStructuresDelegate;
-	LoadStructuresDelegate.BindUObject(this, &ThisClass::LoadSavedStructures, LoadedSave->SavedStructures);
-	GetTimerManager().SetTimerForNextTick(LoadStructuresDelegate);
-
-	FTimerDelegate LoadCitizensDelegate;
-	LoadCitizensDelegate.BindUObject(this, &ThisClass::LoadSavedCitizens, LoadedSave->SavedCitizens);
-	GetTimerManager().SetTimerForNextTick(LoadCitizensDelegate);
-
-	FTimerDelegate LoadResourcesDelegate;
-	LoadResourcesDelegate.BindUObject(this, &ThisClass::LoadSavedResourceNodes, LoadedSave->SavedResourceNodes);
-	GetTimerManager().SetTimerForNextTick(LoadResourcesDelegate);
-
 	GetSubsystem<UTimeSubsystem>()->SetTimeOfDay(LoadedSave->TimeOfDay);
-	GetSubsystem<UTimeSubsystem>()->SetDaysCityHasSurvived(LoadedSave->DaysCityHasSurvived);
-	GetSubsystem<UResourcesSubsystem>()->SetResourceInventory(LoadedSave->CityResources);
-	GetSubsystem<UUnlocksSubsystem>()->SetUnlockedUpgrades(LoadedSave->UnlockedUpgrades);
+    GetSubsystem<UTimeSubsystem>()->SetDaysCityHasSurvived(LoadedSave->DaysCityHasSurvived);
+    GetSubsystem<UResourcesSubsystem>()->SetResourceInventory(LoadedSave->CityResources);
+    GetSubsystem<UUnlocksSubsystem>()->SetUnlockedUpgrades(LoadedSave->UnlockedUpgrades);
 
-	UKismetSystemLibrary::PrintString(GetWorld(), "Save Loaded");
+	// Physical Actors need to be loaded on the next tick.
+	FTimerDelegate StructureLoadingDelegate;
+	StructureLoadingDelegate.BindUObject(this, &ThisClass::LoadSavedStructures, LoadedSave->SavedStructures);
+	GetTimerManager().SetTimerForNextTick(StructureLoadingDelegate);
+
+	FTimerDelegate CitizenLoadingDelegate;
+	CitizenLoadingDelegate.BindUObject(this, &ThisClass::LoadSavedCitizens, LoadedSave->SavedCitizens);
+	GetTimerManager().SetTimerForNextTick(CitizenLoadingDelegate);
+
+	FTimerDelegate ResourcesLoadingDelegate;
+	ResourcesLoadingDelegate.BindUObject(this, &ThisClass::LoadSavedResourceNodes, LoadedSave->SavedResourceNodes);
+	GetTimerManager().SetTimerForNextTick(ResourcesLoadingDelegate);
+
+	FTimerDelegate PlayerLoadingDelegate;
+	PlayerLoadingDelegate.BindUObject(this, &ThisClass::LoadPlayer, LoadedSave->PlayerSave);
+	GetTimerManager().SetTimerForNextTick(PlayerLoadingDelegate);
+
+	// Keep this Timer and Delegate at the end. Broadcasts a delegate notifying that everything else has finished loading.
+	FTimerDelegate FinishedLoadingDelegate;
+	FinishedLoadingDelegate.BindUObject(this, &ThisClass::BroadcastFinishedLoading, SlotName, UserIndex, LoadedGameData);
+	GetTimerManager().SetTimerForNextTick(FinishedLoadingDelegate);
 
 	bWasSaveLoaded = true;
 }
@@ -55,7 +63,7 @@ void UStrategyGameInstance::LoadSavedStructures(const TArray<FStructureSave> Sav
 {
 	for (FStructureSave SavedStructure : SavedStructures)
 	{
-		if (!SavedStructure.StructureClass) continue;
+		checkf(SavedStructure.StructureClass, TEXT("The structure class %s failed to load from save file."), *SavedStructure.StructureClass->GetName());
 
 		AStructure* SpawnedStructure = GetWorld()->SpawnActorDeferred<AStructure>(SavedStructure.StructureClass, SavedStructure.StructureTransform);
 		SpawnedStructure->Rename(*SavedStructure.StructureName);
@@ -77,6 +85,8 @@ void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCi
 	// Spawns all saved citizens.
 	for (FCitizenSave SavedCitizen : SavedCitizens)
 	{
+		checkf(SavedCitizen.CitizenClass, TEXT("The citizen class %s failed to load from save file."), *SavedCitizen.CitizenClass->GetName());
+
 		ACitizen* SpawnedCitizen = GetWorld()->SpawnActorDeferred<ACitizen>(SavedCitizen.CitizenClass, FTransform());
 		SpawnedCitizen->SetCitizenType(SavedCitizen.CitizenType);
 		SpawnedCitizen->SetCitizenState(SavedCitizen.CitizenState);
@@ -125,13 +135,14 @@ void UStrategyGameInstance::LoadSavedCitizens(const TArray<FCitizenSave> SavedCi
 			Cast<ACitizenAIController>(SpawnedCitizen->GetController())->Roam();
 			break;
 		case ECitizenState::AtHome:
+			SpawnedCitizen->EnterStructure(SpawnedCitizen->GetHome());
 			break;
 		case ECitizenState::Working:
+			SpawnedCitizen->EnterStructure(SpawnedCitizen->GetWorkplace());
 			break;
 		default:
 			break;
 		}
-
 	}
 }
 
@@ -151,10 +162,25 @@ void UStrategyGameInstance::LoadSavedResourceNodes(const TArray<FResourceNodeSav
 	// Spawn all saved resources.
 	for (FResourceNodeSave Resource : SavedResources)
 	{
+		checkf(Resource.ResourceClass, TEXT("The resource class %s failed to load from save file."), *Resource.ResourceClass->GetName());
+
 		AResourceNode* SpawnedResource = GetWorld()->SpawnActorDeferred<AResourceNode>(Resource.ResourceClass, FTransform());
 		SpawnedResource->SetResourceAmount(Resource.ResourceAmount);
 		SpawnedResource->FinishSpawning(Resource.ResourceTransform);
 	}
+}
+
+void UStrategyGameInstance::LoadPlayer(const FPlayerSave PlayerSave)
+{
+	GetWorld()->GetFirstPlayerController()->GetPawn()->SetActorTransform(PlayerSave.PlayerTransform);
+	ARTSCamera* RTSCamera = Cast<ARTSCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ARTSCamera::StaticClass()));
+	RTSCamera->SetActorTransform(PlayerSave.RTSCameraTransform);
+	RTSCamera->SetZoom(PlayerSave.RTSCameraZoom);
+}
+
+void UStrategyGameInstance::BroadcastFinishedLoading(const FString SlotName, const int32 UserIndex, USaveGame* LoadedGameData) const
+{
+	OnFinishedLoadingSave.Broadcast(SlotName, UserIndex, LoadedGameData);
 }
 
 void UStrategyGameInstance::SaveGame()
@@ -169,6 +195,9 @@ void UStrategyGameInstance::SaveGame()
 		// Save Player Data
 		FPlayerSave PlayerSave;
 		PlayerSave.PlayerTransform = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorTransform();
+		ARTSCamera* RTSCamera = Cast<ARTSCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ARTSCamera::StaticClass()));
+		PlayerSave.RTSCameraTransform = RTSCamera->GetTransform();
+		PlayerSave.RTSCameraZoom = RTSCamera->GetZoom();
 		SaveGameInstance->PlayerSave = PlayerSave;
 
 		// Save Game Data
@@ -262,9 +291,7 @@ void UStrategyGameInstance::SaveGame()
 
 void UStrategyGameInstance::LoadSave()
 {
-	// Set up the delegate.
 	FAsyncLoadGameFromSlotDelegate LoadedDelegate;
-	// USomeUObjectClass::LoadGameDelegateFunction is a void function that takes the following parameters: const FString& SlotName, const int32 UserIndex, USaveGame* LoadedGameData
 	LoadedDelegate.BindUObject(this, &ThisClass::OnSaveLoaded);
 	const FString SlotNameString = "save";
 	constexpr int32 UserIndexInt32 = 0;

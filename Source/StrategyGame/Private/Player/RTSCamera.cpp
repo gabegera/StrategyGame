@@ -250,6 +250,12 @@ void ARTSCamera::Tick(float DeltaTime)
 	}
 }
 
+void ARTSCamera::SetZoom(const float InZoom)
+{
+	SpringArm->TargetArmLength = FMath::Clamp(InZoom, ZoomDistanceMin, ZoomDistanceMax);
+	UpdateCameraPitch();
+}
+
 FVector ARTSCamera::SnapVectorToGrid(FVector InputPos, int32 GridSize)
 {
 	FVector Output = InputPos;
@@ -267,5 +273,10 @@ AStrategyPlayerController* ARTSCamera::GetPlayerController()
 	}
 
 	return RTSPlayerController;
+}
+
+float ARTSCamera::GetZoom() const
+{
+	return SpringArm->TargetArmLength;
 }
 
